@@ -33,14 +33,14 @@ def main():
         keep_history=True,
     )
     
-    print("---- Initial State ----")
-    log_state_details(buffer.state)
+    # print("---- Initial State ----")
+    # log_state_details(buffer.state)
 
     # ---- 3. 模擬迴圈 ----
-    T = 10  # 模擬 10 個時間步
-    for t in range(T):
-        print(f"""---- Step {t+1}/{T} ----""")
-        
+    training_steps = config.training.training_steps
+    for t in range(training_steps):
+        print(f"""---- Step {t+1}/{training_steps} ----""")
+
         # 在實際應用中，這裡會由模型產生 actions
         # 這裡我們用隨機值做為示意
         B, A = config.training.batch_size, config.training.agents

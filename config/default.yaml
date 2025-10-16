@@ -3,7 +3,7 @@
 training:
   agents: 87
   learning_rate: 1e-3
-  training_steps: 2
+  training_steps: 5
   batch_size: 256
   display_step: 1000
   train_step_interval: 2
