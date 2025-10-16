@@ -5,6 +5,7 @@ from src.configloader import load_config
 from src.env_pack_test import EconPackEnv
 from src.env_buffer import EnvBuffer, demo_transition # New import
 from src.utils import log_state_details
+from src.model import FiLMResNet2In
 
 def main():
     parser = argparse.ArgumentParser(description="Run Bewley-MiLF Simulation with EnvBuffer")
@@ -32,24 +33,44 @@ def main():
         B=config.training.batch_size,
         keep_history=True,
     )
-    
+
+    # ---- 3. 初始化模型 ----
+     # 2 state var broadcast to all agents + 2 individual state 
+    state_dim = 2*config.training.agents + 2 
+    model = FiLMResNet2In(
+        state_dim=state_dim,
+        cond_dim=len(config.tax_params), # tax conditions
+        output_dim=3, # savings next period, multiplier, labor
+        hidden_dim=128,
+        dropout=0.1
+    )
+
     # print("---- Initial State ----")
     # log_state_details(buffer.state)
 
-    # ---- 3. 模擬迴圈 ----
+    # ---- 4. 模擬迴圈 ----
     training_steps = config.training.training_steps
     for t in range(training_steps):
         print(f"""---- Step {t+1}/{training_steps} ----""")
-
+        actions_A = model(buffer.get_obs(branch="A").features, buffer.get_obs(branch="A").condi)
+        actions_B = model(buffer.get_obs(branch="B").features, buffer.get_obs(branch="B").condi)
+        # print(buffer.get_obs_all()["A"])
+        # print(buffer.get_obs_all()["B"])
+        # print(buffer.get_obs_all().moneydisposable, buffer.get_obs_all().savings)
+        # actions = model(buffer.get_obs_all().features, buffer.get_obs_all().condi)
+        # print(actions)
+        # print(f"Model Actions : { {k: v.shape for k, v in actions.items()} }")
+        break
         # 在實際應用中，這裡會由模型產生 actions
         # 這裡我們用隨機值做為示意
-        B, A = config.training.batch_size, config.training.agents
-        dummy_actions = {
-            "consumption": torch.rand(B, A, device=device) * 0.1,
-            "delta_savings": (torch.rand(B, A, device=device) - 0.5) * 0.2,
-            "growth_v1": torch.randn(B, A, device=device) * 0.01,
-            "growth_v2": torch.randn(B, A, device=device) * 0.01,
-        }
+        # B, A = config.training.batch_size, config.training.agents
+
+        # dummy_actions = {
+        #     "consumption": torch.rand(B, A, device=device) * 0.1,
+        #     "delta_savings": (torch.rand(B, A, device=device) - 0.5) * 0.2,
+        #     "growth_v1": torch.randn(B, A, device=device) * 0.01,
+        #     "growth_v2": torch.randn(B, A, device=device) * 0.01,
+        # }
         
         # 使用 buffer.step 和外部的 transition 函數來演化狀態
         info = buffer.step(dummy_actions, demo_transition)

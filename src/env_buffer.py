@@ -76,6 +76,22 @@ class EnvBuffer:
             _set(self.state, k, x)
 
 
+def transition(state: StateDict, actions: Actions, rng: torch.Generator) -> Tuple[StateDict, Info]:
+    dev = _val(state, "moneydisposable").device
+    dt  = _val(state, "moneydisposable").dtype
+
+    money = _val(state, "moneydisposable")
+    sav   = _val(state, "savings")
+    v1    = _val(state, "v1")
+    v2    = _val(state, "v2")
+    tax   = _val(state, "tax_params")        # (B, Z)
+    A     = v1.shape[1] # Number of agents
+    B     = v1.shape[0] # Batch size
+
+
+    # ---- Load actions from agents ---- if not provided, default to zeros
+    cons = actions.get("consumption", torch.zeros_like(money))
+
 def demo_transition(state: StateDict, actions: Actions, rng: torch.Generator) -> Tuple[StateDict, Info]:
     dev = _val(state, "moneydisposable").device
     dt  = _val(state, "moneydisposable").dtype
@@ -85,7 +101,7 @@ def demo_transition(state: StateDict, actions: Actions, rng: torch.Generator) ->
     v1    = _val(state, "v1")
     v2    = _val(state, "v2")
     tax   = _val(state, "tax_params")        # (B, Z)
-    A     = v1.shape[1]
+    A     = v1.shape[1] 
     B     = v1.shape[0]
 
     # ---- 讀取行為（例如）----
