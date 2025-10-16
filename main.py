@@ -3,6 +3,9 @@ import argparse
 import torch 
 from src.configloader import load_config
 from src.packenv import EconVecEnv
+from src.env_pack_test import EconPackEnv
+from src.utils import log_state_details, log_obs_details
+from src.model import FiLMResNet2In
 
 def main():
     parser = argparse.ArgumentParser(description="Run Bewley-MiLF Simulation")
@@ -12,42 +15,42 @@ def main():
 
     config = load_config(args.config)
 
-    env = EconVecEnv(agents=config.training.agents, 
-                     config=config, 
-                     normalize_obs=False # 這個參數之後要改掉，這邊是先可run 再標準化
-                     )
+    state_dim = 2*config.training.agents + 2
+    cond_dim = 5
 
-    # 初始化（只需要一次 reset）
-    B = config.training.batch_size
-    obs0, state, _ = env.reset(batch_size=B)
+    model = FiLMResNet2In(
+        state_dim=state_dim,
+        cond_dim=cond_dim,
+        hidden_dim=128,
+        output_dim=3,
+        num_res_blocks=2,
+        dropout=0.1
+    )
 
-    # print(obs0.keys())
-    # print(state.keys())
+    env = EconPackEnv(
+        agents=config.training.agents,
+        tax_params=config.tax_params,
+        v_min=config.shock.v_min,
+        v_max=config.shock.v_max,
+        device="cuda" if torch.cuda.is_available() else "cpu",
+        dtype=torch.float32,
+        seed=42,
+    )
+    
+    state = env.reset(B=config.training.batch_size)
+    obs = env.get_obs_all(state)
 
-    for i in range(config.training.training_steps):
-        # 兩條互不相關的 ability shocks
-        eps_v_a = torch.randn(B, env.A, device=env.device)
-        eps_v_b = torch.randn(B, env.A, device=env.device)
+    obs_A, obs_B = obs['A'], obs['B']
+    features_A, condi_A = obs_A.features, obs_A.condi
+    features_B, condi_B = obs_B.features, obs_B.condi
 
-        # 若你有 policy，可先用 obs → actions；這裡示意隨機 actions
-        actions = torch.randn(B, env.A, 3, device=env.device)
+    out_A, out_B = model(features_A, condi_A), model(features_B, condi_B)
 
-        # 從同一起點 state 出發，分別前推 A/B
-        state_a, out_a, env.v_history_A = env.step_from(state, actions, eps_v=eps_v_a, v_history=env.v_history_A)
-        state_b, out_b, env.v_history_B = env.step_from(state, actions, eps_v=eps_v_b, v_history=env.v_history_B)
+    # --- 使用新的 utils 函式來記錄日誌 ---
+    # log_state_details(state)
+    # log_obs_details(obs)
 
-        # loss, Residual1, Residual2 = loss_fn(out_a, out_b)  # 你的自定義損失
-        # if i % TRAIN_STEP_INTERVAL == 0:
-        #     optimizer.zero_grad()
-        #     loss.backward()
-        #     optimizer.step()
 
-        # 以 A 路徑作為真實演化（避免跨期回傳就 detach）
-        env.commit(state_a, detach=True)
-        state = env.state
-
-        # if i % config.training.display_step == 0:
-        #     print(f"Loss {i}: {loss.item()} (R1={Residual1.item()}, R2={Residual2.item()})")
 
 if __name__ == "__main__":
     main()

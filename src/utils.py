@@ -1,6 +1,59 @@
+# src.utils.py
 import torch
-from typing import Tuple
+from typing import Dict, Tuple
+from .env_pack_test import Obs
 
+
+def log_state_details(state: Dict[str, Dict[str, torch.Tensor]]):
+    """
+    詳細印出 state 字典中每個 tensor 的資訊 (shape, dtype, device)。
+    """
+    print("="*50)
+    print("🔎 Logging State Details")
+    print("="*50)
+    for name, data in state.items():
+        tensor = data["value"]
+        print(f"🔹 state['{name}']: ")
+        print(f"   - Shape:  {tuple(tensor.shape)}")
+        print(f"   - Dtype:  {tensor.dtype}")
+        print(f"   - Device: {tensor.device}")
+    print("="*50 + "\n")
+
+def log_obs_details(obs: Dict[str, Obs]):
+    """
+    詳細印出 obs 物件中每個 tensor 的資訊 (shape, dtype, device)。
+    """
+    print("="*50)
+    print("🔎 Logging Observation (Obs) Details")
+    print("="*50)
+    for branch_name, obs_pack in obs.items():
+        print(f"--- Branch '{branch_name}' ---")
+        
+        # Log features
+        features_tensor = obs_pack.features
+        print(f"🔸 obs['{branch_name}'].features:")
+        print(f"   - Shape:  {tuple(features_tensor.shape)}")
+        print(f"   - Dtype:  {features_tensor.dtype}")
+        print(f"   - Device: {features_tensor.device}")
+
+        # Log condi
+        condi_tensor = obs_pack.condi
+        print(f"🔸 obs['{branch_name}'].condi:")
+        print(f"   - Shape:  {tuple(condi_tensor.shape)}")
+        print(f"   - Dtype:  {condi_tensor.dtype}")
+        print(f"   - Device: {condi_tensor.device}")
+
+        # Log env_info
+        print(f"🔸 obs['{branch_name}'].env_info:")
+        if not obs_pack.env_info:
+            print("   - (empty)")
+        else:
+            for info_name, info_tensor in obs_pack.env_info.items():
+                print(f"   - '{info_name}':")
+                print(f"     - Shape:  {tuple(info_tensor.shape)}")
+                print(f"     - Dtype:  {info_tensor.dtype}")
+                print(f"     - Device: {info_tensor.device}")
+    print("="*50)
 
 def transition_ability_batched(
     v_prev: torch.Tensor,              # (B, A)

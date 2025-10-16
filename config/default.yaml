@@ -1,10 +1,10 @@
 # config/default.yaml
 
 training:
-  agents: 50
+  agents: 87
   learning_rate: 1e-3
   training_steps: 2
-  batch_size: 10
+  batch_size: 256
   display_step: 1000
   train_step_interval: 2
 

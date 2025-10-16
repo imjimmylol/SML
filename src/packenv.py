@@ -1,3 +1,4 @@
+# src.packenv.py
 from __future__ import annotations
 import torch 
 import math
@@ -6,6 +7,7 @@ import torch
 import torch.nn.functional as F
 from .normalizer import RunningMeanStd
 from .configloader import load_config
+from .utils import transition_ability_batched, update_v_history
 
 class EconVecEnv:
     """
@@ -123,42 +125,6 @@ class EconVecEnv:
         s = money * a
         return c, s
 
-    def _transition_ability_batched(self, v_prev, is_super_prev, v_hist, eps_v=None):
-        """
-        Log-AR(1) for ability, plus superstar regime (enter prob p, stay prob q).
-        Returns v_next, is_super_next, v_hist_next.
-        """
-        B, A = v_prev.shape
-
-        # superstar switching
-        u = torch.rand((B, A), device=v_prev.device, generator=self.rng)
-        stay_super  = is_super_prev & (u < self.q)
-        enter_super = (~is_super_prev) & (u < self.p)
-        super_next  = (stay_super | enter_super)
-
-        # innovation
-        if eps_v is None:
-            eps_v = torch.randn((B, A), device=v_prev.device, generator=self.rng)
-        log_vn = self.rho_v * v_prev.clamp_min(1e-12).log() + self.sigma_v * eps_v
-        v_next = log_vn.exp().clamp(self.v_min, self.v_max)
-
-        # superstar level pegged to global average of history (or current mean if no history)
-        if v_hist is not None and v_hist.numel() > 0:
-            avg_ability = v_hist.mean(dim=(0, 1))  # scalar or (A,) but broadcastable
-        else:
-            avg_ability = v_prev.mean()
-        v_next = torch.where(super_next, self.v_bar * avg_ability.expand_as(v_next), v_next)
-
-        # maintain short history to avoid OOM
-        if v_hist is None:
-            v_hist_next = v_next.unsqueeze(0)  # (T=1, B, A)
-        else:
-            v_hist_next = torch.cat([v_hist, v_next.unsqueeze(0)], dim=0)
-            if v_hist_next.shape[0] > 64:
-                v_hist_next = v_hist_next[-64:]
-
-        return v_next, super_next, v_hist_next
-
     # ----------------------------------------------------------------
     # API
     # ----------------------------------------------------------------
@@ -264,7 +230,23 @@ class EconVecEnv:
         """
         params 保留以後擴充；目前用 self.* 內部參數。
         """
-        return self._transition_ability_batched(v_prev, is_superstar_prev, v_history, eps_v=eps_v)
+        v_next, is_superstar_next = transition_ability_batched(
+                    v_prev=v_prev,
+                    is_superstar_prev=is_superstar_prev,
+                    v_history=v_history,
+                    rho_v=self.rho_v,
+                    sigma_v=self.sigma_v,
+                    p=self.p,
+                    q=self.q,
+                    v_bar=self.v_bar,
+                    v_min=self.v_min,
+                    v_max=self.v_max
+                )
+
+        # 歷史更新也呼叫獨立函式
+        v_hist_next = update_v_history(v_history, v_next)
+
+        return v_next, is_superstar_next, v_hist_next
 
     # ------------------- loss / reward（可選用） -------------------
     def loss_fn(self, state, actions, next_state) -> torch.Tensor:
