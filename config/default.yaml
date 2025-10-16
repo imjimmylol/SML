@@ -1,0 +1,37 @@
+# config/default.yaml
+
+training:
+  agents: 50
+  learning_rate: 1e-3
+  training_steps: 2
+  batch_size: 10
+  display_step: 1000
+  train_step_interval: 2
+
+bewley_model:
+  theta: 1.0         # CRRA
+  beta: 0.975        # Discount factor
+  A: 1.0             # Technology parameter
+  alpha: 0.33        # Capital share of income
+  gamma: 2.0         # Inverse Frisch elasticity
+
+milf_inputs:
+  r: 0.04            # Interest rate (return to savings)
+  w: 1.0             # Wage rate (return to labor)
+  delta: 0.06        # Depreciation rate of capital
+
+tax_params:
+  tax_consumption: 0.065
+  tax_income: 0.2
+  income_tax_elasticity: 0.5
+  saving_tax_elasticity: 0.5
+  tax_saving: 0.1
+
+shock:
+  rho_v: 0.95        # persistence of ability shock
+  sigma_v: 0.2       # std of ability shock
+  v_bar: 1.5
+
+misc:
+  p: 2.2e-6
+  q: 0.99
