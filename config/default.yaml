@@ -31,7 +31,5 @@ shock:
   rho_v: 0.95        # persistence of ability shock
   sigma_v: 0.2       # std of ability shock
   v_bar: 1.5
-
-misc:
   p: 2.2e-6
   q: 0.99

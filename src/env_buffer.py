@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Callable, Dict, Tuple, Optional, Any, Literal
 import torch
 import copy
+from .utils import update_v_history
 
 StateDict = Dict[str, Dict[str, torch.Tensor | Tuple[int, ...]]]
 Actions = Dict[str, torch.Tensor]
@@ -15,7 +16,11 @@ def _val(s: StateDict, key: str) -> torch.Tensor:
 def _set(s: StateDict, key: str, x: torch.Tensor) -> None:
     s[key] = {"value": x, "shape": tuple(x.shape)}
 
-TransitionFn = Callable[[StateDict, Actions, torch.Generator], Tuple[StateDict, Info]]
+# The transition function now also receives the history of v
+TransitionFnWithHistory = Callable[
+    [StateDict, Actions, torch.Generator, Optional[torch.Tensor]],
+    Tuple[StateDict, Info]
+]
 
 @dataclass
 class EnvBuffer:
@@ -23,6 +28,7 @@ class EnvBuffer:
     B: int
     keep_history: bool = True
     history_keys: Tuple[str, ...] = ("moneydisposable", "savings", "v")
+    v_history_max_len: int = 100
 
     def __post_init__(self):
         self.reset()
@@ -35,6 +41,8 @@ class EnvBuffer:
         self.t: int = 0
         self.traj_A: list[Dict[str, torch.Tensor]] = []
         self.traj_B: list[Dict[str, torch.Tensor]] = []
+        self.v_history_A: Optional[torch.Tensor] = None
+        self.v_history_B: Optional[torch.Tensor] = None
         return self.state_A, self.state_B
 
     def get_obs(self, branch: Literal["A", "B"], carry_superstar: bool = True):
@@ -53,7 +61,7 @@ class EnvBuffer:
         self,
         actions_A: Actions,
         actions_B: Actions,
-        transition_fn: TransitionFn,
+        transition_fn: TransitionFnWithHistory,
         *,
         detach: bool = True
     ) -> Dict[str, Info]:
@@ -66,11 +74,17 @@ class EnvBuffer:
 
         self.snapshot()
 
-        next_state_A, info_A = transition_fn(self.state_A, actions_A, self.env.rng)
-        next_state_B, info_B = transition_fn(self.state_B, actions_B, self.env.rng)
+        # Pass the corresponding v_history to the transition function
+        next_state_A, info_A = transition_fn(self.state_A, actions_A, self.env.rng, self.v_history_A)
+        next_state_B, info_B = transition_fn(self.state_B, actions_B, self.env.rng, self.v_history_B)
 
         self.state_A = next_state_A
         self.state_B = next_state_B
+        
+        # Update the v_history for each world
+        self.v_history_A = update_v_history(self.v_history_A, _val(self.state_A, "v"), self.v_history_max_len)
+        self.v_history_B = update_v_history(self.v_history_B, _val(self.state_B, "v"), self.v_history_max_len)
+
         self.t += 1
         return {"A": info_A, "B": info_B}
 
@@ -81,7 +95,10 @@ class EnvBuffer:
             raise KeyError(f"Key '{key}' not in state.")
         _set(state, key, value)
 
-def demo_transition(state: StateDict, actions: Actions, rng: torch.Generator) -> Tuple[StateDict, Info]:
+"""
+# This is a demonstration of a simple transition function.
+# It was the original `demo_transition`.
+def test(state: StateDict, actions: Actions, rng: torch.Generator) -> Tuple[StateDict, Info]:
     money = _val(state, "moneydisposable")
     sav = _val(state, "savings")
     v = _val(state, "v")
@@ -114,4 +131,5 @@ def demo_transition(state: StateDict, actions: Actions, rng: torch.Generator) ->
         "avg_v": v_next.mean(dim=1),
     }
     return next_state, info
+"""
 
