@@ -45,9 +45,26 @@ class EnvBuffer:
         self.v_history_B: Optional[torch.Tensor] = None
         return self.state_A, self.state_B
 
-    def get_obs(self, branch: Literal["A", "B"], carry_superstar: bool = True):
+    def get_obs(
+        self,
+        branch: Literal["A","B"],
+        carry_superstar: bool = True,
+        *,
+        mirror: Literal["none","history","all"] = "history",
+        clone_state: bool = False,
+        detach_state: bool = True,
+    ):
         state = self.state_A if branch == "A" else self.state_B
-        return self.env.get_obs(state, carry_superstar=carry_superstar)
+        # 將 history_keys 傳給 env，實現你要的「連動」
+        packed = self.env.get_obs(
+            state,
+            carry_superstar=carry_superstar,
+            include_state=mirror,
+            history_keys=self.history_keys,
+            clone_state=clone_state,
+            detach_state=detach_state,
+        )
+        return packed
 
     def snapshot(self):
         if not self.keep_history:
