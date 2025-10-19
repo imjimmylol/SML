@@ -20,7 +20,9 @@ def main():
     # Create the configured transition function from our factory
     shock_transition_fn = create_shock_aware_transition(config)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+
+    print(f"using device: {device}")
     env = EconPackEnv(
         agents=config.training.agents,
         tax_params=config.tax_params,
@@ -54,6 +56,9 @@ def main():
     training_steps = config.training.training_steps
     for t in range(training_steps):
         print(f"\n---- Step {t+1}/{training_steps} ----")
+    
+        obs_A, obs_B = buffer.get_obs("A"), buffer.get_obs("B")
+        actions_A, actions_B = model(obs_A.features, obs_A.condi), model(obs_B.features, obs_B.condi)
 
         # Generate dummy actions for demonstration
         B, A = config.training.batch_size, config.training.agents
@@ -70,7 +75,7 @@ def main():
         if t == 0:
             print("\n >> Applying initial shock to World B << ")
             v_B = _val(buffer.state_B, "v")
-            buffer.update_state_value("B", "v", v_B * config.shock.get('initial_shock_multiplier', 1.1))
+            buffer.update_state_value("B", "v", v_B * config.shock.v_bar)
             print("Value 'v' in World B has been shocked.")
 
         # Step the environment for both worlds using the new transition function

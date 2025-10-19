@@ -8,7 +8,7 @@ class Obs:
     """打包給 model 的觀測與補充資訊。"""
     features: torch.Tensor
     condi: torch.Tensor
-    env_info: Dict[str, torch.Tensor]
+    env_info: Dict[str, torch.Tensor] # 不包含進模型的資訊
 
 class EconPackEnv:
     """
