@@ -4,6 +4,16 @@ from typing import Dict, Optional, Tuple
 from .env_pack_test import Obs
 
 
+def modelout_to_dict_test(model_output: torch.Tensor) -> Dict[str, torch.Tensor]:
+    """
+    將模型輸出張量轉換為包含 'action', 'value', 'log_prob' 的字典。
+    假設輸入張量的形狀為 (B, 3)，其中每一列分別對應 action, value, log_prob。
+    """
+    return {
+        "consumption": model_output[:, :, 0],
+        "delta_savings": model_output[:, :, 1]
+    }
+
 def log_state_details(state: Dict[str, Dict[str, torch.Tensor]]):
     """
     詳細印出 state 字典中每個 tensor 的資訊 (shape, dtype, device)。
@@ -106,7 +116,7 @@ def transition_ability_batched(
     # normal 狀態：log-AR(1)
     normal_mask = ~is_superstar_next
     if normal_mask.any():
-        shocks = torch.randn_like(v_prev[normal_mask], generator=rng, device=device)
+        shocks = torch.randn(v_prev[normal_mask].shape, generator=rng, device=device)
         log_v = rho_v * torch.log(torch.clamp(v_prev[normal_mask], min=eps)) + sigma_v * shocks
         v_nxt_normal = torch.exp(log_v)
         v_next[normal_mask] = torch.clamp(v_nxt_normal, min=v_min, max=v_max)

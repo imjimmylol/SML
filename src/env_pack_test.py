@@ -16,7 +16,7 @@ class Packed:
     state_view: Optional[Dict[str, torch.Tensor]]
     meta: Dict[str, Any]
 
-class EconPackEnvTest:
+class EconPackEnv:
     def __init__(self, agents: int, tax_params: Dict[str, float],
                  device: torch.device | str = "cpu",
                  dtype: torch.dtype = torch.float32,

@@ -5,7 +5,7 @@ import torch
 from src.configloader import load_config
 from src.env_pack_test import EconPackEnv
 from src.env_buffer import EnvBuffer, _val
-from src.utils import log_state_details
+from src.utils import log_state_details, modelout_to_dict_test
 from src.model import FiLMResNet2In
 from src.cpx_transition import create_shock_aware_transition
 
@@ -26,8 +26,6 @@ def main():
     env = EconPackEnv(
         agents=config.training.agents,
         tax_params=config.tax_params,
-        v_min=config.shock.v_min,
-        v_max=config.shock.v_max,
         device=device,
         dtype=torch.float32,
         seed=42,
@@ -56,20 +54,12 @@ def main():
     training_steps = config.training.training_steps
     for t in range(training_steps):
         print(f"\n---- Step {t+1}/{training_steps} ----")
-    
-        obs_A, obs_B = buffer.get_obs("A"), buffer.get_obs("B")
-        actions_A, actions_B = model(obs_A.features, obs_A.condi), model(obs_B.features, obs_B.condi)
 
-        # Generate dummy actions for demonstration
-        B, A = config.training.batch_size, config.training.agents
-        dummy_actions = {
-            "consumption": torch.rand(B, A, device=device) * 0.1,
-            "delta_savings": (torch.rand(B, A, device=device) - 0.5) * 0.2,
-        }
+        Packed_A,Packed_B = buffer.get_obs("A"), buffer.get_obs("B")
 
-        # In this setup, both worlds receive the same actions
-        actions_A = dummy_actions
-        actions_B = dummy_actions
+        actions_A, actions_B = model(Packed_A.obs.features, Packed_A.obs.condi), model(Packed_B.obs.features, Packed_B.obs.condi)
+        actions_A = modelout_to_dict_test(actions_A)
+        actions_B = modelout_to_dict_test(actions_B)
 
         # Introduce the external shock on the first step to World B
         if t == 0:
