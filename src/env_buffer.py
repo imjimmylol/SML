@@ -30,19 +30,41 @@ class EnvBuffer:
     history_keys: Tuple[str, ...] = ("moneydisposable", "savings", "v")
     v_history_max_len: int = 100
 
+    # 新增：可選的固定 seed，用來可重現 A/B 的獨立隨機流
+    seed: Optional[int] = None
+
+    # 這兩個是每個 branch 的獨立 RNG
+    rng_A: Optional[torch.Generator] = None
+    rng_B: Optional[torch.Generator] = None
+
+
+
     def __post_init__(self):
         self.reset()
+
+    def _init_branch_rngs(self):
+        dev = self.env.device
+        self.rng_A = torch.Generator(device=dev)
+        self.rng_B = torch.Generator(device=dev)
+        # 用一個基底種子推導出兩條獨立流；若未提供，就用 env.rng 的 initial_seed
+        base = self.seed if self.seed is not None else self.env.rng.initial_seed()
+        # 兩個不同的混洗（64-bit XOR 常數）；保持可重現但互不相同
+        self.rng_A.manual_seed((base ^ 0x9E3779B185EBCA87) & 0xFFFFFFFFFFFFFFFF)
+        self.rng_B.manual_seed((base ^ 0xD1B54A32D192ED03) & 0xFFFFFFFFFFFFFFFF)
 
     @torch.no_grad()
     def reset(self):
         initial_state = self.env.reset(self.B)
-        self.state_A: StateDict = initial_state
-        self.state_B: StateDict = copy.deepcopy(initial_state)
-        self.t: int = 0
-        self.traj_A: list[Dict[str, torch.Tensor]] = []
-        self.traj_B: list[Dict[str, torch.Tensor]] = []
-        self.v_history_A: Optional[torch.Tensor] = None
-        self.v_history_B: Optional[torch.Tensor] = None
+        self.state_A = initial_state
+        self.state_B = copy.deepcopy(initial_state)
+        self.t = 0
+        self.traj_A, self.traj_B = [], []
+        self._init_branch_rngs()
+        # 先把 t=0 的 v 放進歷史
+        v0_A = self.state_A["v"]["value"]
+        v0_B = self.state_B["v"]["value"]
+        self.v_history_A = update_v_history(None, v0_A, self.v_history_max_len)
+        self.v_history_B = update_v_history(None, v0_B, self.v_history_max_len)
         return self.state_A, self.state_B
 
     def get_obs(
@@ -92,8 +114,8 @@ class EnvBuffer:
         self.snapshot()
 
         # Pass the corresponding v_history to the transition function
-        next_state_A, info_A = transition_fn(self.state_A, actions_A, self.env.rng, self.v_history_A)
-        next_state_B, info_B = transition_fn(self.state_B, actions_B, self.env.rng, self.v_history_B)
+        next_state_A, info_A = transition_fn(self.state_A, actions_A, self.rng_A, self.v_history_A)
+        next_state_B, info_B = transition_fn(self.state_B, actions_B, self.rng_B, self.v_history_B)
 
         self.state_A = next_state_A
         self.state_B = next_state_B

@@ -1,6 +1,6 @@
 # src.utils.py
 import torch
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 from .env_pack_test import Obs
 
 
@@ -66,7 +66,8 @@ def transition_ability_batched(
     v_bar: float,
     v_min: float,
     v_max: float,
-    eps: float = 1e-12                 # 避免 log(0)
+    eps: float = 1e-12,                 # 避免 log(0)
+    rng: Optional[torch.Generator] = None
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     向量化、可處理 (B, A) 的版本。
@@ -105,7 +106,7 @@ def transition_ability_batched(
     # normal 狀態：log-AR(1)
     normal_mask = ~is_superstar_next
     if normal_mask.any():
-        shocks = torch.randn_like(v_prev[normal_mask], device=device)
+        shocks = torch.randn_like(v_prev[normal_mask], generator=rng, device=device)
         log_v = rho_v * torch.log(torch.clamp(v_prev[normal_mask], min=eps)) + sigma_v * shocks
         v_nxt_normal = torch.exp(log_v)
         v_next[normal_mask] = torch.clamp(v_nxt_normal, min=v_min, max=v_max)

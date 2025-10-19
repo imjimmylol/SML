@@ -53,6 +53,7 @@ def create_shock_aware_transition(config) -> TransitionFn:
             v_bar=shock_config.v_bar,
             v_min=shock_config.v_min,
             v_max=shock_config.v_max,
+            rng=rng
         )
 
         # 3. Assemble the next state
