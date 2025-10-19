@@ -3,19 +3,18 @@ import argparse
 import torch
 from src.configloader import load_config
 from src.env_pack_test import EconPackEnv
-from src.env_buffer import EnvBuffer, demo_transition # New import
+from src.env_buffer import EnvBuffer, demo_transition, _val
 from src.utils import log_state_details
 from src.model import FiLMResNet2In
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Bewley-MiLF Simulation with EnvBuffer")
+    parser = argparse.ArgumentParser(description="Run Bewley-MiLF Simulation for Two Worlds")
     parser.add_argument("--config", type=str, default="config/default.yaml",
                         help="Path to YAML configuration file")
     args = parser.parse_args()
 
     config = load_config(args.config)
     
-    # ---- 1. 初始化環境 ----
     device = "cuda" if torch.cuda.is_available() else "cpu"
     env = EconPackEnv(
         agents=config.training.agents,
@@ -27,68 +26,73 @@ def main():
         seed=42,
     )
     
-    # ---- 2. 使用 EnvBuffer 包裝 ----
     buffer = EnvBuffer(
         env=env,
         B=config.training.batch_size,
         keep_history=True,
     )
 
-    # ---- 3. 初始化模型 ----
-     # 2 state var broadcast to all agents + 2 individual state 
-    state_dim = 2*config.training.agents + 2 
+    state_dim = 2 * config.training.agents + 2
     model = FiLMResNet2In(
         state_dim=state_dim,
-        cond_dim=len(config.tax_params), # tax conditions
-        output_dim=3, # savings next period, multiplier, labor
+        cond_dim=len(config.tax_params),
+        output_dim=3,
         hidden_dim=128,
         dropout=0.1
-    )
+    ).to(device)
 
-    # print("---- Initial State ----")
-    # log_state_details(buffer.state)
+    print("---- Initial States (A and B are identical) ----")
+    print("State A:")
+    log_state_details(buffer.state_A)
 
-    # ---- 4. 模擬迴圈 ----
     training_steps = config.training.training_steps
     for t in range(training_steps):
-        print(f"""---- Step {t+1}/{training_steps} ----""")
-        actions_A = model(buffer.get_obs(branch="A").features, buffer.get_obs(branch="A").condi)
-        actions_B = model(buffer.get_obs(branch="B").features, buffer.get_obs(branch="B").condi)
-        # print(buffer.get_obs_all()["A"])
-        # print(buffer.get_obs_all()["B"])
-        # print(buffer.get_obs_all().moneydisposable, buffer.get_obs_all().savings)
-        # actions = model(buffer.get_obs_all().features, buffer.get_obs_all().condi)
-        # print(actions)
-        # print(f"Model Actions : { {k: v.shape for k, v in actions.items()} }")
-        break
-        # 在實際應用中，這裡會由模型產生 actions
-        # 這裡我們用隨機值做為示意
-        # B, A = config.training.batch_size, config.training.agents
+        print(f"\n---- Step {t+1}/{training_steps} ----")
 
-        # dummy_actions = {
-        #     "consumption": torch.rand(B, A, device=device) * 0.1,
-        #     "delta_savings": (torch.rand(B, A, device=device) - 0.5) * 0.2,
-        #     "growth_v1": torch.randn(B, A, device=device) * 0.01,
-        #     "growth_v2": torch.randn(B, A, device=device) * 0.01,
-        # }
-        
-        # 使用 buffer.step 和外部的 transition 函數來演化狀態
-        info = buffer.step(dummy_actions, demo_transition)
-        
-        print("Step Info:")
-        for k, v in info.items():
+        # 1. Get observations for both worlds (optional, not used for dummy actions)
+        # obs_A = buffer.get_obs(branch="A")
+        # obs_B = buffer.get_obs(branch="B")
+
+        # 2. Generate dummy actions for demonstration
+        print("\n>> Using randomized dummy actions for this step. <<")
+        B, A = config.training.batch_size, config.training.agents
+        dummy_actions_A = {
+            "consumption": torch.rand(B, A, device=device) * 0.1,
+            "delta_savings": (torch.rand(B, A, device=device) - 0.5) * 0.2,
+            "growth_v": torch.randn(B, A, device=device) * 0.01,
+        }
+        dummy_actions_B = {
+            "consumption": torch.rand(B, A, device=device) * 0.1,
+            "delta_savings": (torch.rand(B, A, device=device) - 0.5) * 0.2,
+            "growth_v": torch.randn(B, A, device=device) * 0.01,
+        }
+
+        # 3. Introduce the shock after the first step
+        if t == 0:
+            print("\n >> Applying initial shock to World B << ")
+            # Example shock: increase v in world B by 10%
+            shock_multiplier = 1.1 
+            v_B = _val(buffer.state_B, "v")
+            buffer.update_state_value("B", "v", v_B * shock_multiplier)
+            print("Value 'v' in World B has been shocked.")
+
+        # 4. Step the environment for both worlds using the demo transition
+        info = buffer.step(dummy_actions_A, dummy_actions_B, demo_transition)
+
+        print("\nStep Info (World A):")
+        for k, v in info["A"].items():
             print(f"  - {k}: shape={v.shape}, mean={v.mean():.4f}")
-            
-        print("\nUpdated State (sample):")
-        log_state_details(buffer.state)
+
+        print("\nStep Info (World B):")
+        for k, v in info["B"].items():
+            print(f"  - {k}: shape={v.shape}, mean={v.mean():.4f}")
+
+        # Optional: Log state details to see divergence
+        if t < 2: # Log first few steps to see the divergence
+            print("\nUpdated State A:")
+            log_state_details(buffer.state_A)
+            print("\nUpdated State B:")
+            log_state_details(buffer.state_B)
 
     print("\n---- Simulation Finished ----")
-    print(f"Trajectory recorded for {len(buffer.traj)} steps.")
-    if buffer.traj:
-        print("First snapshot in trajectory:")
-        for k, v in buffer.traj[0].items():
-            print(f"  - {k}: shape={v.shape}")
-
-
-if __name__ == "__main__":
-    main()
+    print(f"Trajectory recorded for {len(buffer.traj_A)} steps in each world.")
