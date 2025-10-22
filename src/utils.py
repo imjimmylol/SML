@@ -66,7 +66,7 @@ def log_obs_details(obs: Dict[str, Obs]):
     print("="*50)
 
 def transition_ability_batched(
-    v_prev: torch.Tensor,              # (B, A)
+    ability: torch.Tensor,              # (B, A)
     is_superstar_prev: torch.Tensor,   # (B, A)  bool
     v_history: torch.Tensor | None,    # (T, B, A) 或 None
     rho_v: float,
@@ -87,9 +87,9 @@ def transition_ability_batched(
       - normal 狀態依照 log-AR(1)：log v_t = rho * log v_{t-1} + sigma * eps
       - superstar 狀態：v_t = v_bar * avg_ability，其中 avg_ability 取自 v_history 的 (T, A) 平均，再保留每個 batch 的差異
     """
-    assert v_prev.shape == is_superstar_prev.shape, "v_prev 與 is_superstar_prev 形狀需一致"
-    device = v_prev.device
-    B, A = v_prev.shape
+    assert ability.shape == is_superstar_prev.shape, "v_prev 與 is_superstar_prev 形狀需一致"
+    device = ability.device
+    B, A = ability.shape
 
     # ===== 1) 狀態轉移 =====
     u = torch.rand((B, A), device=device)
@@ -108,16 +108,16 @@ def transition_ability_batched(
         avg_per_batch = avg_per_batch.squeeze(0)                  # (B, 1)
     else:
         # 若無歷史，就用當期 (B, A) 的 batch 內平均
-        avg_per_batch = v_prev.mean(dim=1, keepdim=True)          # (B, 1)
+        avg_per_batch = ability.mean(dim=1, keepdim=True)          # (B, 1)
 
     # ===== 3) 計算 v_next =====
-    v_next = torch.empty_like(v_prev)
+    v_next = torch.empty_like(ability)
 
     # normal 狀態：log-AR(1)
     normal_mask = ~is_superstar_next
     if normal_mask.any():
-        shocks = torch.randn(v_prev[normal_mask].shape, generator=rng, device=device)
-        log_v = rho_v * torch.log(torch.clamp(v_prev[normal_mask], min=eps)) + sigma_v * shocks
+        shocks = torch.randn(ability[normal_mask].shape, generator=rng, device=device)
+        log_v = rho_v * torch.log(torch.clamp(ability[normal_mask], min=eps)) + sigma_v * shocks
         v_nxt_normal = torch.exp(log_v)
         v_next[normal_mask] = torch.clamp(v_nxt_normal, min=v_min, max=v_max)
 
