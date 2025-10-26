@@ -1,0 +1,53 @@
+_wandb:
+    value:
+        cli_version: 0.22.2
+        e:
+            antjcfxobag8wajddpizbjdspwm8a6dz:
+                codePath: Bewley2 copy.ipynb
+                codePathLocal: Bewley2 copy.ipynb
+                cpu_count: 12
+                cpu_count_logical: 20
+                cudaVersion: "12.8"
+                disk:
+                    /:
+                        total: "499107491840"
+                        used: "247270703104"
+                email: zhinghe78@gmail.com
+                executable: c:\Users\daikon\anaconda3\envs\sml\python.exe
+                git:
+                    commit: a743debefebdab988f25dd1667cd007e34989d39
+                    remote: git@github.com:imjimmylol/SML.git
+                gpu: NVIDIA RTX A4000
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6144
+                      memoryTotal: "17171480576"
+                      name: NVIDIA RTX A4000
+                      uuid: GPU-0c4ac1e8-03d7-c013-287d-eee2b770c1f8
+                host: DaikonServer
+                memory:
+                    total: "68482527232"
+                os: Windows-10-10.0.26200-SP0
+                program: c:\Users\daikon\jimmy\SML\Bewley2 copy.ipynb
+                python: CPython 3.11.13
+                root: c:\Users\daikon\jimmy\SML
+                startedAt: "2025-10-26T09:20:07.863283Z"
+                writerId: antjcfxobag8wajddpizbjdspwm8a6dz
+        m: []
+        python_version: 3.11.13
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 13
+            "4": 3.11.13
+            "5": 0.22.2
+            "8":
+                - 1
+                - 3
+            "12": 0.22.2
+            "13": windows-amd64
