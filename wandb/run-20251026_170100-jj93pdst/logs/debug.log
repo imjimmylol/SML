@@ -1,0 +1,22 @@
+2025-10-26 17:01:00,214 INFO    MainThread:10816 [wandb_init.py:setup_run_log_directory():705] Logging user logs to c:\Users\daikon\jimmy\SML\wandb\run-20251026_170100-jj93pdst\logs\debug.log
+2025-10-26 17:01:00,214 INFO    MainThread:10816 [wandb_init.py:setup_run_log_directory():706] Logging internal logs to c:\Users\daikon\jimmy\SML\wandb\run-20251026_170100-jj93pdst\logs\debug-internal.log
+2025-10-26 17:01:00,214 INFO    MainThread:10816 [wandb_init.py:init():832] calling init triggers
+2025-10-26 17:01:00,214 INFO    MainThread:10816 [wandb_init.py:init():837] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-10-26 17:01:01,172 INFO    MainThread:10816 [wandb_init.py:init():880] starting backend
+2025-10-26 17:01:01,173 INFO    MainThread:10816 [wandb_init.py:init():883] sending inform_init request
+2025-10-26 17:01:01,174 INFO    MainThread:10816 [wandb_init.py:init():891] backend started and connected
+2025-10-26 17:01:01,175 INFO    MainThread:10816 [wandb_run.py:_label_probe_notebook():1330] probe notebook
+2025-10-26 17:01:01,182 INFO    MainThread:10816 [wandb_init.py:init():961] updated telemetry
+2025-10-26 17:01:01,210 INFO    MainThread:10816 [wandb_init.py:init():985] communicating run to backend with 90.0 second timeout
+2025-10-26 17:01:01,795 INFO    MainThread:10816 [wandb_init.py:init():1036] starting run threads in backend
+2025-10-26 17:01:01,869 INFO    MainThread:10816 [wandb_run.py:_console_start():2509] atexit reg
+2025-10-26 17:01:01,869 INFO    MainThread:10816 [wandb_run.py:_redirect():2357] redirect: wrap_raw
+2025-10-26 17:01:01,869 INFO    MainThread:10816 [wandb_run.py:_redirect():2426] Wrapping output streams.
+2025-10-26 17:01:01,869 INFO    MainThread:10816 [wandb_run.py:_redirect():2449] Redirects installed.
+2025-10-26 17:01:01,870 INFO    MainThread:10816 [wandb_init.py:init():1076] run started, returning control to user process
+2025-10-26 17:04:28,894 INFO    MainThread:10816 [wandb_run.py:_finish():2275] finishing run zhinghe78-uccu/sml-1/jj93pdst
+2025-10-26 17:04:28,895 INFO    MainThread:10816 [wandb_run.py:_atexit_cleanup():2474] got exitcode: 0
+2025-10-26 17:04:28,895 INFO    MainThread:10816 [wandb_run.py:_restore():2456] restore
+2025-10-26 17:04:28,895 INFO    MainThread:10816 [wandb_run.py:_restore():2462] restore done
+2025-10-26 17:04:29,830 INFO    MainThread:10816 [wandb_run.py:_footer_sync_info():3872] logging synced files

@@ -1,0 +1,6 @@
+2025-10-26 17:04:28,892 INFO    MainThread:10816 [wandb_init.py:setup_run_log_directory():705] Logging user logs to c:\Users\daikon\jimmy\SML\wandb\run-20251026_170428-12ndas5s\logs\debug.log
+2025-10-26 17:04:28,892 INFO    MainThread:10816 [wandb_init.py:setup_run_log_directory():706] Logging internal logs to c:\Users\daikon\jimmy\SML\wandb\run-20251026_170428-12ndas5s\logs\debug-internal.log
+2025-10-26 17:04:28,892 INFO    MainThread:10816 [wandb_init.py:monkeypatch_ipython():624] configuring jupyter hooks <wandb.sdk.wandb_init._WandbInit object at 0x000002ADD441FE10>
+2025-10-26 17:04:28,892 INFO    MainThread:10816 [wandb_init.py:init():832] calling init triggers
+2025-10-26 17:04:28,892 INFO    MainThread:10816 [wandb_init.py:init():837] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
