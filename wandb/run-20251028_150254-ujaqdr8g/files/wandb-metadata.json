@@ -1,0 +1,36 @@
+{
+  "os":  "macOS-15.5-arm64-arm-64bit",
+  "python":  "CPython 3.10.18",
+  "startedAt":  "2025-10-28T07:02:54.476350Z",
+  "program":  "/Users/chenjinghe/Desktop/python-projects/SML-2/Bewley2 copy.ipynb",
+  "codePath":  "Bewley2 copy.ipynb",
+  "codePathLocal":  "Bewley2 copy.ipynb",
+  "git":  {
+    "remote":  "git@github.com:imjimmylol/SML.git",
+    "commit":  "44b82a0176e1dced05a9e635d1246b4b0d84e973"
+  },
+  "email":  "zhinghe78@gmail.com",
+  "root":  "/Users/chenjinghe/Desktop/python-projects/SML-2",
+  "host":  "chenjinghedeMacBook-Pro.local",
+  "executable":  "/opt/miniconda3/envs/sml/bin/python",
+  "cpu_count":  12,
+  "cpu_count_logical":  12,
+  "disk":  {
+    "/":  {
+      "total":  "494384795648",
+      "used":  "110953406464"
+    }
+  },
+  "memory":  {
+    "total":  "25769803776"
+  },
+  "apple":  {
+    "name":  "Apple M4 Pro",
+    "ecpuCores":  4,
+    "pcpuCores":  8,
+    "gpuCores":  16,
+    "memoryGb":  24,
+    "ramTotalBytes":  "25769803776"
+  },
+  "writerId":  "bagp519gek6tp03fdhbzv7t8wsqxygr8"
+}
