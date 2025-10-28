@@ -1,7 +1,0 @@
-Training Progress: 100%|█| 5/5 [00:00<00:00,  6.74it/s, Loss=2.1488e+00, FB=5.2103e-02, Aux=2.5030e-
-
-✅ Saved checkpoint: ./checkpoints/model_step_2.pt
-
-✅ Saved checkpoint: ./checkpoints/model_step_4.pt
-
-🎯 Training complete. Final model saved to: ./checkpoints/model_final.pt
