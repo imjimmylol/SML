@@ -1,0 +1,10 @@
+Training Progress: 100%|█| 5/5 [00:00<00:00,  6.72it/s, Loss=2.0208e+00, FB=4.0555e-02, Aux=1.9838e-
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_2.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_2.pkl
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_4.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_4.pkl
+
+🎯 Final model weights saved to: ./checkpoints/exp_transition/run/weights/model_final.pt
+📦 Final training state saved to: ./checkpoints/exp_transition/run/states/final_state.pkl

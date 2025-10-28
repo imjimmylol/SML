@@ -1,0 +1,35 @@
+_wandb:
+    value:
+        cli_version: 0.22.2
+        e:
+            9nclbt10bhwi9zhrytqkr61bh7ilo3i7:
+                codePath: Bewley2 copy.ipynb
+                codePathLocal: Bewley2 copy.ipynb
+                email: zhinghe78@gmail.com
+                executable: /opt/miniconda3/envs/sml/bin/python
+                git:
+                    commit: dc3bc4a1583f096b4e539db2cb33e62e4ffe2440
+                    remote: git@github.com:imjimmylol/SML.git
+                host: chenjinghedeMacBook-Pro.local
+                os: macOS-15.5-arm64-arm-64bit
+                program: /Users/chenjinghe/Desktop/python-projects/SML-2/Bewley2 copy.ipynb
+                python: CPython 3.10.18
+                root: /Users/chenjinghe/Desktop/python-projects/SML-2
+                startedAt: "2025-10-28T09:18:52.978388Z"
+                writerId: 9nclbt10bhwi9zhrytqkr61bh7ilo3i7
+        m: []
+        python_version: 3.10.18
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 13
+            "4": 3.10.18
+            "5": 0.22.2
+            "8":
+                - 1
+            "12": 0.22.2
+            "13": darwin-arm64

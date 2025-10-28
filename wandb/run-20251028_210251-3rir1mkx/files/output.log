@@ -1,0 +1,38 @@
+Training Progress:  70%|▋| 7/10 [00:00<00:00,  9.12it/s, Loss=1.5039e+00, FB=5.7437e-02, Aux=2.2669e
+==================================================
+
+⚠️ [Warning] Negative values detected in inputs:
+ibt: min=-5.8607e-01, max=1.1776e+01, mean=-3.1104e-01, negatives=12127
+savings: min=-5.6887e-01, max=1.2043e+01, mean=-3.0667e-01, negatives=12130
+⚠️ [Warning] Negative values detected in inputs:
+ibt: min=-5.8597e-01, max=1.1776e+01, mean=-3.1104e-01, negatives=12127
+savings: min=-5.6887e-01, max=1.2043e+01, mean=-3.0667e-01, negatives=12130
+==================================================
+
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_2.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_2.pkl
+==================================================
+
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_4.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_4.pkl
+==================================================
+
+⚠️ [Warning] Negative values detected in inputs:
+ibt: min=-4.7120e-01, max=9.0791e-01, mean=-2.3599e-01, negatives=11437
+savings: min=-4.9100e-01, max=9.4090e-01, mean=-2.4523e-01, negatives=11439
+⚠️ [Warning] Negative values detected in inputs:
+ibt: min=-4.7113e-01, max=9.0767e-01, mean=-2.3599e-01, negatives=11437
+savings: min=-4.9100e-01, max=9.4090e-01, mean=-2.4523e-01, negatives=11439
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_6.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_6.pkl
+==================================================
+
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_8.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_8.pkl
+
+🎯 Final model weights saved to: ./checkpoints/exp_transition/run/weights/model_final.pt
+📦 Final training state saved to: ./checkpoints/exp_transition/run/states/final_state.pkl

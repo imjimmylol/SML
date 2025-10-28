@@ -1,0 +1,12 @@
+Training Progress: 100%|█| 2/2 [00:00<00:00,  6.17it/s, Loss=7.5437e-01, FB=4.7475e-02, Aux=1.1831e-
+wage : tensor([1.8607], grad_fn=<SelectBackward0>)
+
+==================================================
+
+wage : tensor([0.0008], grad_fn=<SelectBackward0>)
+
+wage : tensor([0.0008], grad_fn=<SelectBackward0>)
+
+
+🎯 Final model weights saved to: ./checkpoints/exp_transition/run/weights/model_final.pt
+📦 Final training state saved to: ./checkpoints/exp_transition/run/states/final_state.pkl

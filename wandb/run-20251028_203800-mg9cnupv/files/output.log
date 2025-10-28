@@ -1,0 +1,56 @@
+Training Progress:  50%|▌| 5/10 [00:00<00:00,  6.98it/s, Loss=2.7793e+00, FB=1.7877e-02, Aux=4.6581e
+wage : tensor([1.2322], grad_fn=<SelectBackward0>)
+
+==================================================
+
+wage : tensor([0.0008], grad_fn=<SelectBackward0>)
+
+wage : tensor([0.0008], grad_fn=<SelectBackward0>)
+
+wage : tensor([0.0008], grad_fn=<SelectBackward0>)
+
+==================================================
+
+wage : tensor([11.7241], grad_fn=<SelectBackward0>)
+
+wage : tensor([12.2178], grad_fn=<SelectBackward0>)
+
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_2.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_2.pkl
+wage : tensor([11.2722], grad_fn=<SelectBackward0>)
+
+==================================================
+
+wage : tensor([0.7481], grad_fn=<SelectBackward0>)
+
+wage : tensor([0.7382], grad_fn=<SelectBackward0>)
+
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_4.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_4.pkl
+wage : tensor([0.0008], grad_fn=<SelectBackward0>)
+
+==================================================
+
+wage : tensor([11.7322], grad_fn=<SelectBackward0>)
+
+wage : tensor([12.0763], grad_fn=<SelectBackward0>)
+
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_6.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_6.pkl
+wage : tensor([10.7369], grad_fn=<SelectBackward0>)
+
+==================================================
+
+wage : tensor([0.7237], grad_fn=<SelectBackward0>)
+
+wage : tensor([0.7285], grad_fn=<SelectBackward0>)
+
+
+✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_8.pt
+📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_8.pkl
+
+🎯 Final model weights saved to: ./checkpoints/exp_transition/run/weights/model_final.pt
+📦 Final training state saved to: ./checkpoints/exp_transition/run/states/final_state.pkl
