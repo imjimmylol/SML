@@ -68,12 +68,12 @@ def log_obs_details(obs: Dict[str, Obs]):
 def transition_ability_batched(
     ability: torch.Tensor,              # (B, A)
     is_superstar_prev: torch.Tensor,   # (B, A)  bool
-    v_history: torch.Tensor | None,    # (T, B, A) 或 None
-    rho_v: float,
-    sigma_v: float,
+    ability_history: torch.Tensor | None,    # (T, B, A) 或 None
+    rho_ability: float,
+    sigma_ability: float,
     p: float,     # normal -> superstar 的機率
     q: float,     # superstar 留在 superstar 的機率
-    v_bar: float,
+    ability_bar: float,
     v_min: float,
     v_max: float,
     eps: float = 1e-12,                 # 避免 log(0)
@@ -102,49 +102,74 @@ def transition_ability_batched(
     is_superstar_next = promote | stay_super   # 其餘的就會是 normal
 
     # ===== 2) 算 superstar 需要用到的平均能力 =====
-    if v_history is not None and v_history.numel() > 0:
+    if ability_history is not None and ability_history.numel() > 0:
         # v_history: (T, B, A) → 對時間與 agent 取平均，留下每個 batch 的均值 (B, 1)
-        avg_per_batch = v_history.mean(dim=(0, 2), keepdim=True)  # (1, B, 1)
+        avg_per_batch = ability_history.mean(dim=(0, 2), keepdim=True)  # (1, B, 1)
         avg_per_batch = avg_per_batch.squeeze(0)                  # (B, 1)
     else:
         # 若無歷史，就用當期 (B, A) 的 batch 內平均
         avg_per_batch = ability.mean(dim=1, keepdim=True)          # (B, 1)
 
     # ===== 3) 計算 v_next =====
-    v_next = torch.empty_like(ability)
+    ability_next = torch.empty_like(ability)
 
     # normal 狀態：log-AR(1)
     normal_mask = ~is_superstar_next
     if normal_mask.any():
         shocks = torch.randn(ability[normal_mask].shape, generator=rng, device=device)
-        log_v = rho_v * torch.log(torch.clamp(ability[normal_mask], min=eps)) + sigma_v * shocks
-        v_nxt_normal = torch.exp(log_v)
-        v_next[normal_mask] = torch.clamp(v_nxt_normal, min=v_min, max=v_max)
+        shocks = shocks.clamp(min=v_min, max=v_max) # normalize shock 
+        log_ability = rho_ability * torch.log(torch.clamp(ability[normal_mask], min=eps)) + sigma_ability * shocks
+        ability_nxt_normal = torch.exp(log_ability)
+        ability_next[normal_mask] = torch.clamp(ability_nxt_normal, min=v_min, max=v_max)
 
     # superstar 狀態：v_bar * (該 batch 的平均能力)
     if is_superstar_next.any():
         # 把 (B,1) 的 batch-均值 broadcast 到 (B,A)
-        v_super = v_bar * avg_per_batch
-        v_super = v_super.expand(B, A)
-        v_next[is_superstar_next] = v_super[is_superstar_next]
+        ability_super = ability_bar * avg_per_batch
+        ability_super = ability_super.expand(B, A)
+        ability_next[is_superstar_next] = ability_super[is_superstar_next]
 
-    return v_next, is_superstar_next
+    return ability_next, is_superstar_next
 
 
-def update_v_history(
-    v_history: torch.Tensor | None,
-    v_next: torch.Tensor,          # (B, A)
+def update_ability_history(
+    ability_history: torch.Tensor | None,
+    ability_next: torch.Tensor,          # (B, A)
     max_len: int | None = None
 ) -> torch.Tensor:
     """
     動態更新 v_history；若 max_len 有設，僅保留最後 max_len 期。
     形狀：v_history 為 (T, B, A)；v_next 為 (B, A)
     """
-    v_next = v_next.detach().unsqueeze(0)  # (1, B, A)
-    if v_history is None:
-        out = v_next
+    ability_next = ability_next.detach().unsqueeze(0)  # (1, B, A)
+    if ability_history is None:
+        out = ability_next
     else:
-        out = torch.cat([v_history, v_next], dim=0)  # (T+1, B, A)
+        out = torch.cat([ability_history, ability_next], dim=0)  # (T+1, B, A)
     if max_len is not None and out.shape[0] > max_len:
         out = out[-max_len:]
     return out
+
+
+def _summarize_tensor(x, name="tensor"):
+    x = x if torch.is_tensor(x) else torch.tensor(x, dtype=torch.float32)
+    xf = x.reshape(-1).to(torch.float32)
+    isnan = torch.isnan(xf)
+    isinf = torch.isinf(xf)
+    valid = ~(isnan | isinf)
+    xv = xf[valid] if valid.any() else torch.tensor([], dtype=xf.dtype)
+
+    def _safe(fn, default=float('nan')):
+        return fn(xv).item() if xv.numel() > 0 else default
+
+    pos = (xv > 0).sum().item()
+    neg = (xv < 0).sum().item()
+    zer = (xv == 0).sum().item()
+    tot = xv.numel()
+
+    def frac(n): return (n / tot) if tot > 0 else float('nan')
+
+    print(f"{name:>12s}: shape={tuple(x.shape)}, dtype={x.dtype}")
+    print(f"{'':12s}  min={_safe(torch.min):.4e}  max={_safe(torch.max):.4e}  mean={_safe(torch.mean):.4e}")
+    print(f"{'':12s}  pos={pos} ({frac(pos):.2%})  neg={neg} ({frac(neg):.2%})  zero={zer} ({frac(zer):.2%})")
+    print(f"{'':12s}  NaN={isnan.sum().item()}  Inf={isinf.sum().item()}  valid={tot}")

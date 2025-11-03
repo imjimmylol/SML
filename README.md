@@ -90,3 +90,27 @@ graph TD
     *   It calculates `v1_next` and `v2_next` *independently* using their respective growth rates.
     *   It calculates the next values for shared variables (e.g., `money_next`).
     *   It packs everything into a `next_state` dictionary, which is used to update the buffer's state for the next iteration.
+
+
+## Labor FOC loss
+
+TAX_PARAMS = {
+    "tax_consumption": 0.065,          # Consumption tax (fixed)
+    "tax_income": 0.2,                # Tax on labor income
+    "income_tax_elasticity": 0.5,     # Elasticity of labor supply w.r.t. after-tax income
+    "saving_tax_elasticity": 0.5,     # Elasticity of savings w.r.t. after-tax income
+    "tax_saving": 0.1                 # Tax on interest income
+}
+
+converge
+
+
+TAX_PARAMS = {
+    "tax_consumption": 0.065,          # Consumption tax (fixed)
+    "tax_income": 0.5,                # Tax on labor income
+    "income_tax_elasticity": 0.5,     # Elasticity of labor supply w.r.t. after-tax income
+    "saving_tax_elasticity": 0.5,     # Elasticity of savings w.r.t. after-tax income
+    "tax_saving": 0.5                 # Tax on interest income
+}
+
+diverge for gamma = 2 or gamma = 0.5
