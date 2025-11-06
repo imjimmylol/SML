@@ -77,7 +77,8 @@ def transition_ability_batched(
     v_min: float,
     v_max: float,
     eps: float = 1e-12,                 # 避免 log(0)
-    rng: Optional[torch.Generator] = None
+    rng: Optional[torch.Generator] = None,
+    zero: bool = False                  # 關閉隨機性
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     向量化、可處理 (B, A) 的版本。
@@ -86,13 +87,18 @@ def transition_ability_batched(
       - 對於「原本是 superstar」者：以機率 q 留在 superstar，否則降回 normal
       - normal 狀態依照 log-AR(1)：log v_t = rho * log v_{t-1} + sigma * eps
       - superstar 狀態：v_t = v_bar * avg_ability，其中 avg_ability 取自 v_history 的 (T, A) 平均，再保留每個 batch 的差異
+      - 若 zero=True，關閉所有隨機性：狀態不轉移，AR(1) shock 設為 0
     """
     assert ability.shape == is_superstar_prev.shape, "v_prev 與 is_superstar_prev 形狀需一致"
     device = ability.device
     B, A = ability.shape
 
     # ===== 1) 狀態轉移 =====
-    u = torch.rand((B, A), device=device)
+    if zero:
+        # 關閉隨機性：狀態保持不變
+        u = torch.ones((B, A), device=device)  # 設為 1.0，防止任何轉移
+    else:
+        u = torch.rand((B, A), device=device)
 
     # 從 normal 升到 super
     promote = (~is_superstar_prev) & (u < p)
@@ -116,8 +122,12 @@ def transition_ability_batched(
     # normal 狀態：log-AR(1)
     normal_mask = ~is_superstar_next
     if normal_mask.any():
-        shocks = torch.randn(ability[normal_mask].shape, generator=rng, device=device)
-        shocks = shocks.clamp(min=v_min, max=v_max) # normalize shock 
+        if zero:
+            # 關閉隨機性：shock 設為 0
+            shocks = torch.zeros(ability[normal_mask].shape, device=device)
+        else:
+            shocks = torch.randn(ability[normal_mask].shape, generator=rng, device=device)
+            shocks = shocks.clamp(min=v_min, max=v_max) # normalize shock
         log_ability = rho_ability * torch.log(torch.clamp(ability[normal_mask], min=eps)) + sigma_ability * shocks
         ability_nxt_normal = torch.exp(log_ability)
         ability_next[normal_mask] = torch.clamp(ability_nxt_normal, min=v_min, max=v_max)

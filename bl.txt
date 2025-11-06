@@ -2,7 +2,7 @@
  "cells": [
   {
    "cell_type": "code",
-   "execution_count": 46,
+   "execution_count": 31,
    "id": "dfaad11b",
    "metadata": {},
    "outputs": [
@@ -22,7 +22,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 47,
+   "execution_count": 32,
    "id": "528c29ec",
    "metadata": {},
    "outputs": [],
@@ -54,7 +54,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 48,
+   "execution_count": 33,
    "id": "322c0a7e",
    "metadata": {},
    "outputs": [],
@@ -116,7 +116,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 49,
+   "execution_count": 34,
    "id": "5623bb24",
    "metadata": {},
    "outputs": [],
@@ -136,7 +136,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 50,
+   "execution_count": 35,
    "id": "24015c71",
    "metadata": {},
    "outputs": [],
@@ -322,12 +322,12 @@
     "        loss = torch.tensor(1e6, device=device, dtype=dtype)\n",
     "        print(\"⚠️ Loss overflow → replaced with 1e6\")\n",
     "\n",
-    "    for name, t in {\n",
-    "    \"c0\": c0, \"c1_A\": c1_A, \"ibt_A\": ibt_A,\n",
-    "    \"savings2_A\": savings2_A, \"ret0\": ret0\n",
-    "    }.items():\n",
-    "        print(f\"{name}: mean={t.mean():.3e}, std={t.std():.3e}, \"\n",
-    "            f\"min={t.min():.3e}, max={t.max():.3e}\")\n",
+    "    # for name, t in {\n",
+    "    # \"c0\": c0, \"c1_A\": c1_A, \"ibt_A\": ibt_A,\n",
+    "    # \"savings2_A\": savings2_A, \"ret0\": ret0\n",
+    "    # }.items():\n",
+    "    #     print(f\"{name}: mean={t.mean():.3e}, std={t.std():.3e}, \"\n",
+    "    #         f\"min={t.min():.3e}, max={t.max():.3e}\")\n",
     "    return loss\n",
     "\n",
     "# 仔細檢查這個loss\n",
@@ -358,7 +358,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 51,
+   "execution_count": 36,
    "id": "657d1525",
    "metadata": {},
    "outputs": [],
@@ -482,7 +482,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 52,
+   "execution_count": 37,
    "id": "6aa30b8f",
    "metadata": {},
    "outputs": [],
@@ -562,7 +562,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 53,
+   "execution_count": 38,
    "id": "238cc037",
    "metadata": {},
    "outputs": [],
@@ -575,7 +575,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 54,
+   "execution_count": 39,
    "id": "90e6c34d",
    "metadata": {},
    "outputs": [],
@@ -620,7 +620,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 55,
+   "execution_count": 78,
    "id": "968fe3a1",
    "metadata": {},
    "outputs": [],
@@ -653,39 +653,41 @@
     "def build_inputs(moneydisposable, ability, tax_params, device=DEVICE, eps=1e-8):\n",
     "    \"\"\"\n",
     "    回傳:\n",
-    "      features : (B, A, 2A + 2)          # 給模型輸入\n",
-    "      condi    : (B, A, Z)              # 稅制條件\n",
-    "      env_info : dict                   # 僅供環境轉移使用，不進模型\n",
+    "      features : (B, A, 2A + 2)   # 給模型輸入\n",
+    "      condi    : (B, A, Z)        # 稅制條件\n",
     "    \"\"\"\n",
+    "    # ---- 1. 保證都是 tensor ----\n",
+    "    moneydisposable = torch.as_tensor(moneydisposable, dtype=torch.float32, device=device)\n",
+    "    ability         = torch.as_tensor(ability,         dtype=torch.float32, device=device)\n",
+    "    tax_params      = torch.as_tensor(tax_params,      dtype=torch.float32, device=device)\n",
+    "\n",
     "    B, A = moneydisposable.shape\n",
     "\n",
-    "    # -------- 使用 Min–Max 標準化 (逐 batch) --------\n",
+    "    # ---- 2. Min–Max 標準化 (逐 batch) ----\n",
     "    m_min = moneydisposable.min(dim=1, keepdim=True)[0]\n",
     "    m_max = moneydisposable.max(dim=1, keepdim=True)[0]\n",
-    "\n",
     "    moneydisposable = (moneydisposable - m_min) / (m_max - m_min + eps)\n",
     "\n",
-    "    # -------- 原本流程 --------\n",
+    "    # ---- 3. 原本流程 ----\n",
     "    # (B, Z) -> (B, A, Z)\n",
-    "    condi = tax_params.unsqueeze(1).expand(-1, A, -1)\n",
+    "    condi = tax_params.unsqueeze(1).expand(-1, A, -1)   # tax_params: (B, Z)\n",
     "\n",
     "    # (B, 2A) -> (B, A, 2A)\n",
-    "    sum_info = torch.cat([moneydisposable, ability], dim=1)         # (B, 2A)\n",
-    "    sum_info_rep = sum_info.unsqueeze(1).expand(-1, A, -1)    # (B, A, 2A)\n",
+    "    sum_info = torch.cat([moneydisposable, ability], dim=1)     # (B, 2A)\n",
+    "    sum_info_rep = sum_info.unsqueeze(1).expand(-1, A, -1)      # (B, A, 2A)\n",
     "\n",
     "    # (B, A, 1) × 2\n",
-    "    money_self = moneydisposable.unsqueeze(-1)  # (B, A, 1)\n",
-    "    ability_self     = ability.unsqueeze(-1)                # (B, A, 1)\n",
+    "    money_self   = moneydisposable.unsqueeze(-1)  # (B, A, 1)\n",
+    "    ability_self = ability.unsqueeze(-1)          # (B, A, 1)\n",
     "\n",
-    "    # 給模型的 features\n",
     "    features = torch.cat([sum_info_rep, money_self, ability_self], dim=2)  # (B, A, 2A+2)\n",
     "\n",
-    "    return features.to(device), condi.to(device)\n"
+    "    return features, condi\n"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 56,
+   "execution_count": 41,
    "id": "89b85041",
    "metadata": {},
    "outputs": [],
@@ -724,7 +726,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 57,
+   "execution_count": 42,
    "id": "6db38f6c",
    "metadata": {},
    "outputs": [],
@@ -799,60 +801,63 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 58,
-   "id": "061133fc",
+   "execution_count": null,
+   "id": "d2eeb617",
    "metadata": {},
    "outputs": [],
    "source": [
-    "# 在這裡加入shock\n",
-    "# def update_state_dict(part_transition_output, state_dicta):\n",
-    "#     state_dict[\"moneydisposable\"] = part_transition_output[\"moneydisposable\"]\n",
-    "#     state_dict[\"savings\"] = part_transition_output[\"savings\"]\n",
-    "#     state_dict[]"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 59,
-   "id": "719f2802",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "def run_model(state_dict_train, model, ability_history_A, ability_history_B, training_step):\n",
+    "def run_model(state_dict_train, model, ability_history_A, ability_history_B, training_step, is_valid=False):\n",
     "    \"\"\"\n",
-    "    Modified to include weighted loss components\n",
+    "    Fixed version: Compute forward pass without mutating input state,\n",
+    "    only update state_dict_train at the very end after loss computation.\n",
     "    \"\"\"\n",
-    "    state_dict_tmp = {}\n",
-    "    # t=0\n",
-    "    # print(f'b4 model {state_dict_train[\"moneydisposable\"][0]}')\n",
-    "    model_out_0 = run_network_given_state(state_dict_train, model=model)\n",
-    "    # print(f'model out, savings : {model_out_0[\"savings_t1\"][0]}') # 是saving ratio 沒錯\n",
-    "    # moneydisposable, savings, consumption, wage, ret, ibt\n",
-    "    part_transition_output = part_transition_transform(state=state_dict_train, model_out=model_out_0, is_init=True, training_step=training_step)\n",
-    "    # 應該問題在這裡\n",
-    "    # print(f'after model {part_transition_output[\"moneydisposable\"][0]}')\n",
-    "    # print(\"=\"*50, \"\\n\")\n",
-    "    keys_to_keep = [\"moneydisposable\", \"savings\", \"consumption\", \"wage\", \"ret\", \"ibt\", \"tax_params\"]\n",
-    "    state_dict_tmp = {k: part_transition_output[k] for k in keys_to_keep if k in part_transition_output}\n",
-    "\n",
+    "    \n",
+    "    # ========== t=0: Initial state snapshot (NO MUTATION) ==========\n",
+    "    # Create a snapshot of initial state for t=0 computations\n",
+    "    state_t0 = {\n",
+    "        \"moneydisposable\": state_dict_train[\"moneydisposable\"],\n",
+    "        \"savings\": state_dict_train[\"savings\"],\n",
+    "        \"ability\": state_dict_train[\"ability\"],\n",
+    "        \"is_superstar_vA\": state_dict_train[\"is_superstar_vA\"],\n",
+    "        \"is_superstar_vB\": state_dict_train[\"is_superstar_vB\"],\n",
+    "        \"tax_params\": state_dict_train[\"tax_params\"],\n",
+    "        \"ret\": state_dict_train[\"ret\"]\n",
+    "    }\n",
+    "    \n",
+    "    # Run model at t=0 using snapshot\n",
+    "    model_out_0 = run_network_given_state(state_t0, model=model)\n",
+    "    \n",
+    "    # Transform to get t=0 outcomes (consumption, savings for t=1)\n",
+    "    part_transition_output_t0 = part_transition_transform(\n",
+    "        state=state_t0, \n",
+    "        model_out=model_out_0, \n",
+    "        is_init=True, \n",
+    "        training_step=training_step\n",
+    "    )\n",
+    "    \n",
+    "    # ========== Prepare t=1 state (still NO MUTATION of state_dict_train) ==========\n",
+    "    # Transition abilities for both branches\n",
     "    ability_next_A, is_superstar_next_A = transition_ability_batched(\n",
-    "        ability=state_dict_train[\"ability\"],\n",
-    "        is_superstar_prev=state_dict_train[\"is_superstar_vA\"],\n",
+    "        ability=state_t0[\"ability\"],\n",
+    "        is_superstar_prev=state_t0[\"is_superstar_vA\"],\n",
     "        ability_history=ability_history_A,\n",
     "        rho_ability=rho_v, sigma_ability=sigma_v,\n",
-    "        p=p, q=q, ability_bar=v_bar,\n",
-    "        v_min=v_min, v_max=v_max\n",
+    "        p=p if not is_valid else 1, q=q if not is_valid else 1, ability_bar=v_bar,\n",
+    "        v_min=v_min, v_max=v_max,\n",
+    "        zero=is_valid\n",
     "    )\n",
     "\n",
     "    ability_next_B, is_superstar_next_B = transition_ability_batched(\n",
-    "        ability=state_dict_train[\"ability\"],\n",
-    "        is_superstar_prev=state_dict_train[\"is_superstar_vB\"],\n",
+    "        ability=state_t0[\"ability\"],\n",
+    "        is_superstar_prev=state_t0[\"is_superstar_vB\"],\n",
     "        ability_history=ability_history_B,\n",
     "        rho_ability=rho_v, sigma_ability=sigma_v,\n",
-    "        p=p, q=q, ability_bar=v_bar,\n",
-    "        v_min=v_min, v_max=v_max\n",
+    "        p=p if not is_valid else 1, q=q if not is_valid else 1, ability_bar=v_bar,\n",
+    "        v_min=v_min, v_max=v_max,\n",
+    "        zero=is_valid\n",
     "    )\n",
     "\n",
+    "    # Update ability histories (these are separate tensors, OK to update)\n",
     "    ability_history_A = update_ability_history(\n",
     "        ability_history=ability_history_A,\n",
     "        ability_next=ability_next_A,\n",
@@ -863,62 +868,108 @@
     "        ability_next=ability_next_B,\n",
     "        max_len=MAX_HISTORY_LEN\n",
     "    )\n",
-    "\n",
-    "    state_dict_tmp[\"ability_A\"] = ability_next_A\n",
-    "    state_dict_tmp[\"ability_B\"] = ability_next_B\n",
-    "\n",
-    "    # t=1\n",
-    "    model_out_1A = run_network_given_state(state_dict_tmp, model=model, brach=\"A\")\n",
-    "    model_out_1B = run_network_given_state(state_dict_tmp, model=model, brach=\"B\")\n",
     "    \n",
-    "    part_transition_output_A = part_transition_transform(state_dict_tmp, model_out_1A, branch=\"A\", is_init=False, training_step=training_step)\n",
-    "    part_transition_output_B = part_transition_transform(state_dict_tmp, model_out_1B, branch=\"B\", is_init=False, training_step=training_step)\n",
+    "    # Build t=1 state for branch A\n",
+    "    state_t1_A = {\n",
+    "        \"moneydisposable\": part_transition_output_t0[\"moneydisposable\"],\n",
+    "        \"savings\": part_transition_output_t0[\"savings\"],\n",
+    "        \"consumption\": part_transition_output_t0[\"consumption\"],\n",
+    "        \"wage\": part_transition_output_t0[\"wage\"],\n",
+    "        \"ret\": part_transition_output_t0[\"ret\"],\n",
+    "        \"ibt\": part_transition_output_t0[\"ibt\"],\n",
+    "        \"tax_params\": part_transition_output_t0[\"tax_params\"],\n",
+    "        \"ability_A\": ability_next_A,\n",
+    "        \"ability_B\": ability_next_B  # Keep both for state construction\n",
+    "    }\n",
+    "    \n",
+    "    # Build t=1 state for branch B (shares same base, different ability)\n",
+    "    state_t1_B = {\n",
+    "        \"moneydisposable\": part_transition_output_t0[\"moneydisposable\"],\n",
+    "        \"savings\": part_transition_output_t0[\"savings\"],\n",
+    "        \"consumption\": part_transition_output_t0[\"consumption\"],\n",
+    "        \"wage\": part_transition_output_t0[\"wage\"],\n",
+    "        \"ret\": part_transition_output_t0[\"ret\"],\n",
+    "        \"ibt\": part_transition_output_t0[\"ibt\"],\n",
+    "        \"tax_params\": part_transition_output_t0[\"tax_params\"],\n",
+    "        \"ability_A\": ability_next_A,\n",
+    "        \"ability_B\": ability_next_B\n",
+    "    }\n",
     "\n",
-    "    # --- calculate loss components ---\n",
-    "    fb_loss = fbloss(savings_ratio=model_out_0[\"savings_t1\"], mutilpier=model_out_0[\"mu_t0\"])\n",
-    "    # aux_loss = auxiloss(c0=state_dict_tmp[\"consumption\"],\n",
+    "    # ========== t=1: Forward pass for both branches ==========\n",
+    "    model_out_1A = run_network_given_state(state_t1_A, model=model, brach=\"A\")\n",
+    "    model_out_1B = run_network_given_state(state_t1_B, model=model, brach=\"B\")\n",
+    "    \n",
+    "    part_transition_output_A = part_transition_transform(\n",
+    "        state_t1_A, \n",
+    "        model_out_1A, \n",
+    "        branch=\"A\", \n",
+    "        is_init=False, \n",
+    "        training_step=training_step\n",
+    "    )\n",
+    "    part_transition_output_B = part_transition_transform(\n",
+    "        state_t1_B, \n",
+    "        model_out_1B, \n",
+    "        branch=\"B\", \n",
+    "        is_init=False, \n",
+    "        training_step=training_step\n",
+    "    )\n",
+    "\n",
+    "    # ========== Loss Computation (clean graph) ==========\n",
+    "    fb_loss = fbloss(\n",
+    "        savings_ratio=model_out_0[\"savings_t1\"], \n",
+    "        mutilpier=model_out_0[\"mu_t0\"]\n",
+    "    )\n",
+    "    \n",
+    "    aux_loss = auxiloss(\n",
+    "        c0=part_transition_output_t0[\"consumption\"],  # Use t0 output, not state_dict_tmp\n",
+    "        c1_A=part_transition_output_A[\"consumption\"],\n",
+    "        c1_B=part_transition_output_B[\"consumption\"],\n",
+    "        mu_t0=model_out_0[\"mu_t0\"],\n",
+    "        savings2_A=part_transition_output_A[\"savings\"], \n",
+    "        savings2_B=part_transition_output_B[\"savings\"],  # Fixed: was using A twice\n",
+    "        ibt_A=part_transition_output_A[\"ibt\"], \n",
+    "        ibt_B=part_transition_output_B[\"ibt\"],\n",
+    "        ret0=state_t0[\"ret\"],  # Use snapshot\n",
+    "        theta=theta\n",
+    "    )\n",
+    "    # aux_loss = auxiloss_stable_v2(c0=part_transition_output_t0[\"consumption\"],\n",
     "    #          c1_A=part_transition_output_A[\"consumption\"],c1_B=part_transition_output_B[\"consumption\"],\n",
     "    #          mu_t0=model_out_0[\"mu_t0\"],\n",
-    "    #          savings2_A=part_transition_output_A[\"savings\"], savings2_B=part_transition_output_A[\"savings\"],\n",
+    "    #          savings2_A=part_transition_output_A[\"savings\"], savings2_B=part_transition_output_B[\"savings\"],\n",
     "    #          ibt_A=part_transition_output_A[\"ibt\"], ibt_B=part_transition_output_B[\"ibt\"],\n",
-    "    #          ret0=state_dict_train[\"ret\"], theta=theta)\n",
-    "    aux_loss = auxiloss_stable_v2(c0=state_dict_tmp[\"consumption\"],\n",
-    "             c1_A=part_transition_output_A[\"consumption\"],c1_B=part_transition_output_B[\"consumption\"],\n",
-    "             mu_t0=model_out_0[\"mu_t0\"],\n",
-    "             savings2_A=part_transition_output_A[\"savings\"], savings2_B=part_transition_output_A[\"savings\"],\n",
-    "             ibt_A=part_transition_output_A[\"ibt\"], ibt_B=part_transition_output_B[\"ibt\"],\n",
-    "             ret0=state_dict_train[\"ret\"], theta=theta, mode=\"log\")\n",
+    "    #          ret0=state_t0[\"ret\"], theta=theta, mode=\"log\")\n",
     "    \n",
-    "    laborfoc_loss = laborfocloss_stable(labor=model_out_0[\"labor_t0\"],\n",
-    "                 consumption=state_dict_tmp[\"consumption\"],\n",
-    "                 ibt = state_dict_tmp[\"ibt\"],\n",
-    "                 wage=state_dict_tmp[\"wage\"],\n",
-    "                 ability=state_dict_train[\"ability\"],\n",
-    "                 taxparams=TAX_PARAMS)\n",
+    "    laborfoc_loss = laborfocloss_stable(\n",
+    "        labor=model_out_0[\"labor_t0\"],\n",
+    "        consumption=part_transition_output_t0[\"consumption\"],  # Use t0 output\n",
+    "        ibt=part_transition_output_t0[\"ibt\"],  # Use t0 output\n",
+    "        wage=part_transition_output_t0[\"wage\"],  # Use t0 output\n",
+    "        ability=state_t0[\"ability\"],  # Use snapshot\n",
+    "        taxparams=TAX_PARAMS\n",
+    "    )\n",
     "    \n",
-    "    # Weighted total loss (可能要放h_{t+1})\n",
     "    total_loss = fb_loss + LAMBDA_AUX * aux_loss + LAMBDA_FOC * laborfoc_loss\n",
     "\n",
-    "    # Update state dict \n",
-    "    state_dict_train[\"is_superstar_vA\"] = is_superstar_next_A \n",
-    "    state_dict_train[\"is_superstar_vB\"] = is_superstar_next_B\n",
-    "    state_dict_train[\"moneydisposable\"] = part_transition_output_A[\"moneydisposable\"]\n",
-    "    state_dict_train[\"savings\"] = part_transition_output_A[\"savings\"]\n",
-    "    state_dict_train[\"ability\"] = state_dict_tmp[\"ability_A\"]\n",
-    "    state_dict_train[\"ret\"] = part_transition_output_A[\"ret\"]\n",
-    "    state_dict_train[\"consumption\"] = part_transition_output_A[\"consumption\"]\n",
+    "    # ========== NOW update state_dict_train (AFTER loss computation) ==========\n",
+    "    # This happens outside the computational graph used for loss.backward()\n",
+    "    state_dict_train[\"is_superstar_vA\"] = is_superstar_next_A.detach()\n",
+    "    state_dict_train[\"is_superstar_vB\"] = is_superstar_next_B.detach()\n",
+    "    state_dict_train[\"moneydisposable\"] = part_transition_output_A[\"moneydisposable\"].detach()\n",
+    "    state_dict_train[\"savings\"] = part_transition_output_A[\"savings\"].detach()\n",
+    "    state_dict_train[\"ability\"] = ability_next_A.detach()\n",
+    "    state_dict_train[\"ret\"] = part_transition_output_A[\"ret\"].detach()\n",
+    "    state_dict_train[\"consumption\"] = part_transition_output_A[\"consumption\"].detach()\n",
     "\n",
     "    return state_dict_train, ability_history_A, ability_history_B, total_loss, {\n",
     "        'fb_loss': fb_loss.item(),\n",
     "        'aux_loss': aux_loss.item(),\n",
-    "        # 'laborfoc_loss': laborfoc_loss.item()\n",
     "        'laborfoc_loss': laborfoc_loss.item()\n",
     "    }"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 60,
+   "execution_count": 44,
    "id": "7d628380",
    "metadata": {},
    "outputs": [],
@@ -929,10 +980,17 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 61,
+   "execution_count": 45,
    "id": "b01e9a56",
    "metadata": {},
    "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\u001b[34m\u001b[1mwandb\u001b[0m: Currently logged in as: \u001b[33mzhinghe78\u001b[0m (\u001b[33mzhinghe78-uccu\u001b[0m) to \u001b[32mhttps://api.wandb.ai\u001b[0m. Use \u001b[1m`wandb login --relogin`\u001b[0m to force relogin\n"
+     ]
+    },
     {
      "data": {
       "text/html": [],
@@ -958,7 +1016,7 @@
     {
      "data": {
       "text/html": [
-       "Run data is saved locally in <code>/Users/chenjinghe/Desktop/python-projects/SML-2/wandb/run-20251105_151928-h8gph4kq</code>"
+       "Run data is saved locally in <code>/Users/chenjinghe/Desktop/python-projects/SML-2/wandb/run-20251106_103839-kzmxhfox</code>"
       ],
       "text/plain": [
        "<IPython.core.display.HTML object>"
@@ -970,7 +1028,7 @@
     {
      "data": {
       "text/html": [
-       "Syncing run <strong><a href='https://wandb.ai/zhinghe78-uccu/sml-1/runs/h8gph4kq' target=\"_blank\">exp_transition_run_baseline_mleak</a></strong> to <a href='https://wandb.ai/zhinghe78-uccu/sml-1' target=\"_blank\">Weights & Biases</a> (<a href='https://wandb.me/developer-guide' target=\"_blank\">docs</a>)<br>"
+       "Syncing run <strong><a href='https://wandb.ai/zhinghe78-uccu/sml-1/runs/kzmxhfox' target=\"_blank\">exp_transition_run_baseline_mleak</a></strong> to <a href='https://wandb.ai/zhinghe78-uccu/sml-1' target=\"_blank\">Weights & Biases</a> (<a href='https://wandb.me/developer-guide' target=\"_blank\">docs</a>)<br>"
       ],
       "text/plain": [
        "<IPython.core.display.HTML object>"
@@ -994,7 +1052,7 @@
     {
      "data": {
       "text/html": [
-       " View run at <a href='https://wandb.ai/zhinghe78-uccu/sml-1/runs/h8gph4kq' target=\"_blank\">https://wandb.ai/zhinghe78-uccu/sml-1/runs/h8gph4kq</a>"
+       " View run at <a href='https://wandb.ai/zhinghe78-uccu/sml-1/runs/kzmxhfox' target=\"_blank\">https://wandb.ai/zhinghe78-uccu/sml-1/runs/kzmxhfox</a>"
       ],
       "text/plain": [
        "<IPython.core.display.HTML object>"
@@ -1007,39 +1065,21 @@
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "Training Progress:  10%| | 103/1000 [00:10<01:27, 10.21it/s, Loss=6.1479e-02, FB=1.9236e-03, Aux=8.2"
+      "Training Progress:   0%| | 1/1000 [00:00<04:03,  4.10it/s, Loss=3.7899e-01, FB=4.3394e-02, Aux=3.925"
      ]
     },
     {
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "\n",
-      "✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_100.pt\n",
-      "📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_100.pkl\n"
+      "📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_0.pkl\n"
      ]
     },
     {
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "Training Progress:  20%|▏| 203/1000 [00:20<01:17, 10.24it/s, Loss=5.3786e-02, FB=1.3937e-03, Aux=5.0"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_200.pt\n",
-      "📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_200.pkl\n"
-     ]
-    },
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "Training Progress:  30%|▎| 303/1000 [00:30<01:08, 10.21it/s, Loss=5.8369e-02, FB=5.9290e-04, Aux=1.7"
+      "Training Progress:  30%|▎| 303/1000 [00:28<01:03, 10.93it/s, Loss=1.7755e-02, FB=1.2138e-03, Aux=1.2"
      ]
     },
     {
@@ -1055,39 +1095,7 @@
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "Training Progress:  40%|▍| 401/1000 [00:40<00:59, 10.00it/s, Loss=6.4655e-02, FB=2.7370e-04, Aux=2.0"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_400.pt\n",
-      "📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_400.pkl\n"
-     ]
-    },
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "Training Progress:  50%|▌| 503/1000 [00:50<00:48, 10.16it/s, Loss=6.6935e-02, FB=1.6830e-04, Aux=3.1"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_500.pt\n",
-      "📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_500.pkl\n"
-     ]
-    },
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "Training Progress:  60%|▌| 601/1000 [01:00<00:47,  8.43it/s, Loss=7.0509e-02, FB=1.1459e-04, Aux=3.8"
+      "Training Progress:  60%|▌| 603/1000 [00:55<00:36, 10.75it/s, Loss=1.7068e-02, FB=8.9597e-04, Aux=8.9"
      ]
     },
     {
@@ -1103,39 +1111,7 @@
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "Training Progress:  70%|▋| 703/1000 [01:10<00:30,  9.66it/s, Loss=7.2282e-02, FB=7.6951e-05, Aux=4.3"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_700.pt\n",
-      "📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_700.pkl\n"
-     ]
-    },
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "Training Progress:  80%|▊| 801/1000 [01:20<00:20,  9.55it/s, Loss=7.4165e-02, FB=6.2749e-05, Aux=5.2"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "✅ Saved model weights: ./checkpoints/exp_transition/run/weights/model_step_800.pt\n",
-      "📦 Saved state dict: ./checkpoints/exp_transition/run/states/state_step_800.pkl\n"
-     ]
-    },
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "Training Progress:  90%|▉| 901/1000 [01:31<00:09,  9.95it/s, Loss=7.6650e-02, FB=4.2248e-05, Aux=5.7"
+      "Training Progress:  90%|▉| 903/1000 [01:23<00:08, 11.10it/s, Loss=2.2438e-02, FB=8.7061e-04, Aux=1.0"
      ]
     },
     {
@@ -1151,7 +1127,7 @@
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "Training Progress: 100%|█| 1000/1000 [01:41<00:00,  9.84it/s, Loss=7.6164e-02, FB=3.1251e-05, Aux=6."
+      "Training Progress: 100%|█| 1000/1000 [01:31<00:00, 10.87it/s, Loss=2.7106e-02, FB=1.0194e-03, Aux=1."
      ]
     },
     {
@@ -1183,7 +1159,7 @@
     {
      "data": {
       "text/html": [
-       "<br>    <style><br>        .wandb-row {<br>            display: flex;<br>            flex-direction: row;<br>            flex-wrap: wrap;<br>            justify-content: flex-start;<br>            width: 100%;<br>        }<br>        .wandb-col {<br>            display: flex;<br>            flex-direction: column;<br>            flex-basis: 100%;<br>            flex: 1;<br>            padding: 10px;<br>        }<br>    </style><br><div class=\"wandb-row\"><div class=\"wandb-col\"><h3>Run history:</h3><br/><table class=\"wandb\"><tr><td>aux_loss</td><td>█▄▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</td></tr><tr><td>fb_loss</td><td>█▅▃▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</td></tr><tr><td>laborfoc_loss</td><td>█▃▂▃▃▂▁▁▁▁▂▂▃▃▃▃▃▄▃▃▃▄▄▄▄▄▄▄▄▄▄▅▄▅▅▅▅▅▅▅</td></tr><tr><td>learning_rate</td><td>▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</td></tr><tr><td>loss</td><td>█▃▂▂▂▁▁▁▁▁▁▁▁▂▂▂▂▂▂▂▂▂▂▂▂▂▃▃▃▃▃▃▃▃▃▃▃▃▃▃</td></tr><tr><td>state/consumption_mean</td><td>█▇▆▆▅▄▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁</td></tr><tr><td>state/moneydisposable_mean</td><td>█▆▄▄▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</td></tr><tr><td>state/savings_mean</td><td>█▇▆▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</td></tr><tr><td>step</td><td>▁▁▁▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▃▃▄▄▄▄▅▅▅▅▆▆▆▇▇▇▇█████</td></tr></table><br/></div><div class=\"wandb-col\"><h3>Run summary:</h3><br/><table class=\"wandb\"><tr><td>aux_loss</td><td>0.00065</td></tr><tr><td>fb_loss</td><td>3e-05</td></tr><tr><td>laborfoc_loss</td><td>0.07548</td></tr><tr><td>learning_rate</td><td>0.001</td></tr><tr><td>loss</td><td>0.07616</td></tr><tr><td>state/consumption_mean</td><td>0.39669</td></tr><tr><td>state/moneydisposable_mean</td><td>0.39813</td></tr><tr><td>state/savings_mean</td><td>0.00144</td></tr><tr><td>step</td><td>998</td></tr></table><br/></div></div>"
+       "<br>    <style><br>        .wandb-row {<br>            display: flex;<br>            flex-direction: row;<br>            flex-wrap: wrap;<br>            justify-content: flex-start;<br>            width: 100%;<br>        }<br>        .wandb-col {<br>            display: flex;<br>            flex-direction: column;<br>            flex-basis: 100%;<br>            flex: 1;<br>            padding: 10px;<br>        }<br>    </style><br><div class=\"wandb-row\"><div class=\"wandb-col\"><h3>Run history:</h3><br/><table class=\"wandb\"><tr><td>aux_loss</td><td>▇█▇▆▆▄▄▄▄▃▃▃▃▃▂▂▂▂▃▂▂▂▂▂▂▂▁▁▂▂▂▁▂▂▂▂▃▄▃▄</td></tr><tr><td>fb_loss</td><td>█▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</td></tr><tr><td>laborfoc_loss</td><td>█▃▃▂▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▁▁▂▂▂▂▂▂▂▂▂▂▃▃▅</td></tr><tr><td>learning_rate</td><td>▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</td></tr><tr><td>loss</td><td>█▅▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</td></tr><tr><td>state/consumption_mean</td><td>██▇▆▇▇▇█▆▆▅▄▄▄▄▃▃▃▂▂▂▂▂▂▂▁▁▁▂▂▁▂▂▁▁▁▁▂▂▃</td></tr><tr><td>state/moneydisposable_mean</td><td>▁▄▆▇▇▇▇▇▇▇▇█████████████████████████████</td></tr><tr><td>state/savings_mean</td><td>▁▂▃▅▇▇▆▆▆▆▇▇▇▇▇█▇▇█████████████████████▇</td></tr><tr><td>step</td><td>▁▁▁▁▂▂▂▂▃▃▃▃▄▄▄▄▅▅▅▅▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇█████</td></tr></table><br/></div><div class=\"wandb-col\"><h3>Run summary:</h3><br/><table class=\"wandb\"><tr><td>aux_loss</td><td>0.00124</td></tr><tr><td>fb_loss</td><td>0.00102</td></tr><tr><td>laborfoc_loss</td><td>0.02485</td></tr><tr><td>learning_rate</td><td>0.001</td></tr><tr><td>loss</td><td>0.02711</td></tr><tr><td>state/consumption_mean</td><td>1.28718</td></tr><tr><td>state/moneydisposable_mean</td><td>3.21248</td></tr><tr><td>state/savings_mean</td><td>1.9253</td></tr><tr><td>step</td><td>998</td></tr></table><br/></div></div>"
       ],
       "text/plain": [
        "<IPython.core.display.HTML object>"
@@ -1195,7 +1171,7 @@
     {
      "data": {
       "text/html": [
-       " View run <strong style=\"color:#cdcd00\">exp_transition_run_baseline_mleak</strong> at: <a href='https://wandb.ai/zhinghe78-uccu/sml-1/runs/h8gph4kq' target=\"_blank\">https://wandb.ai/zhinghe78-uccu/sml-1/runs/h8gph4kq</a><br> View project at: <a href='https://wandb.ai/zhinghe78-uccu/sml-1' target=\"_blank\">https://wandb.ai/zhinghe78-uccu/sml-1</a><br>Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)"
+       " View run <strong style=\"color:#cdcd00\">exp_transition_run_baseline_mleak</strong> at: <a href='https://wandb.ai/zhinghe78-uccu/sml-1/runs/kzmxhfox' target=\"_blank\">https://wandb.ai/zhinghe78-uccu/sml-1/runs/kzmxhfox</a><br> View project at: <a href='https://wandb.ai/zhinghe78-uccu/sml-1' target=\"_blank\">https://wandb.ai/zhinghe78-uccu/sml-1</a><br>Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)"
       ],
       "text/plain": [
        "<IPython.core.display.HTML object>"
@@ -1207,7 +1183,7 @@
     {
      "data": {
       "text/html": [
-       "Find logs at: <code>./wandb/run-20251105_151928-h8gph4kq/logs</code>"
+       "Find logs at: <code>./wandb/run-20251106_103839-kzmxhfox/logs</code>"
       ],
       "text/plain": [
        "<IPython.core.display.HTML object>"
@@ -1230,7 +1206,7 @@
     "loss_history = []\n",
     "\n",
     "TRAINING_STEPS = 1000\n",
-    "SAVE_INTERVAL = 100\n",
+    "SAVE_INTERVAL = 300\n",
     "\n",
     "with tqdm(total=TRAINING_STEPS, desc=\"Training Progress\", ncols=100) as pbar:\n",
     "    for i in range(TRAINING_STEPS):\n",
@@ -1299,6 +1275,13 @@
     "                    pickle.dump(state_dict_train, f)\n",
     "                print(f\"📦 Saved state dict: {state_path}\")\n",
     "\n",
+    "            # --- save 4 the first batch ---\n",
+    "            if i == 0:\n",
+    "                # Save state dict\n",
+    "                state_path = os.path.join(STATE_DIR, f\"state_step_{i}.pkl\")\n",
+    "                with open(state_path, \"wb\") as f:\n",
+    "                    pickle.dump(state_dict_train, f)\n",
+    "                print(f\"📦 Saved state dict: {state_path}\")\n",
     "            # --- Progress bar ---\n",
     "            pbar.set_postfix({\n",
     "                \"Loss\": f\"{loss.item():.4e}\",\n",
@@ -1321,140 +1304,6 @@
    ]
   },
   {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "abc17f2d",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# state_dict_train = initial_state(required_batch_size=256)\n",
-    "# print(state_dict_train[\"moneydisposable\"])"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "85b9181b",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "\n",
-    "\n",
-    "# wandb.init(\n",
-    "#     project=\"sml-1\",\n",
-    "#     name=f\"{EXP_NAME}_{RUN_NAME}_baseline_mleak\",\n",
-    "# )\n",
-    "\n",
-    "# # --- Initialize state ---\n",
-    "# state_dict_train = initial_state(required_batch_size=256)\n",
-    "# ability_history_A = None\n",
-    "# ability_history_B = None\n",
-    "# loss_history = []\n",
-    "# # money_history = []\n",
-    "\n",
-    "# TRAINING_STEPS = 100\n",
-    "# SAVE_INTERVAL = 2 \n",
-    "\n",
-    "# with tqdm(total=TRAINING_STEPS, desc=\"Training Progress\", ncols=100) as pbar:\n",
-    "#     for i in range(TRAINING_STEPS):\n",
-    "#         if i % TRAIN_STEP_INTERVAL == 0:\n",
-    "\n",
-    "#             optimizer.zero_grad()\n",
-    "#             # print(state_dict_train[\"moneydisposable\"].shape)\n",
-    "#             # money_history.append(state_dict_train[\"moneydisposable\"].mean().item())\n",
-    "\n",
-    "\n",
-    "#             # Forward\n",
-    "#             state_dict_train, ability_history_A, ability_history_B, loss, loss_components = run_model(\n",
-    "#                 state_dict_train=state_dict_train,\n",
-    "#                 model=model,\n",
-    "#                 ability_history_A=ability_history_A,\n",
-    "#                 ability_history_B=ability_history_B,\n",
-    "#                 training_step=i\n",
-    "#             )\n",
-    "#             # Backward\n",
-    "#             loss.backward()\n",
-    "#             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)\n",
-    "#             optimizer.step()\n",
-    "#             scheduler.step()\n",
-    "\n",
-    "#             # Detach state\n",
-    "#             state_dict_train = detach_state_dict(state_dict_train)\n",
-    "#             if ability_history_A is not None: ability_history_A = ability_history_A.detach()\n",
-    "#             if ability_history_B is not None: ability_history_B = ability_history_B.detach()\n",
-    "\n",
-    "#             loss_history.append(loss.item())\n",
-    "\n",
-    "#             # --- W&B log ---\n",
-    "#             wandb.log({\n",
-    "#                 \"step\": i,\n",
-    "#                 \"loss\": loss.item(),\n",
-    "#                 \"fb_loss\": loss_components[\"fb_loss\"],\n",
-    "#                 \"aux_loss\": loss_components[\"aux_loss\"],\n",
-    "#                 \"laborfoc_loss\": loss_components[\"laborfoc_loss\"],\n",
-    "#                 \"learning_rate\": scheduler.get_last_lr()[0]\n",
-    "#             })\n",
-    "\n",
-    "#             # --- Periodic save ---\n",
-    "#             if i % SAVE_INTERVAL == 0 and i > 0:\n",
-    "#                 # Save model weights\n",
-    "#                 weight_path = os.path.join(WEIGHT_DIR, f\"model_step_{i}.pt\")\n",
-    "#                 torch.save({\n",
-    "#                     \"step\": i,\n",
-    "#                     \"model_state_dict\": model.state_dict(),\n",
-    "#                     \"optimizer_state_dict\": optimizer.state_dict(),\n",
-    "#                     \"scheduler_state_dict\": scheduler.state_dict(),\n",
-    "#                     \"loss\": loss.item(),\n",
-    "#                 }, weight_path)\n",
-    "#                 print(f\"\\n✅ Saved model weights: {weight_path}\")\n",
-    "\n",
-    "#                 # Save state dict\n",
-    "#                 state_path = os.path.join(STATE_DIR, f\"state_step_{i}.pkl\")\n",
-    "#                 with open(state_path, \"wb\") as f:\n",
-    "#                     pickle.dump(state_dict_train, f)\n",
-    "#                 print(f\"📦 Saved state dict: {state_path}\")\n",
-    "\n",
-    "#             pbar.set_postfix({\n",
-    "#                 \"Loss\": f\"{loss.item():.4e}\",\n",
-    "#                 \"FB\": f\"{loss_components['fb_loss']:.4e}\",\n",
-    "#                 \"Aux\": f\"{loss_components['aux_loss']:.4e}\",\n",
-    "#                 \"LaborFOC\": f\"{loss_components['laborfoc_loss']:.4e}\",\n",
-    "#                 \"LR\": f\"{scheduler.get_last_lr()[0]:.2e}\"\n",
-    "#             })\n",
-    "#         pbar.update(1)\n",
-    "\n",
-    "# # --- Final save ---\n",
-    "\n",
-    "# torch.save(model.state_dict(), final_weight_path)\n",
-    "# print(f\"\\n🎯 Final model weights saved to: {final_weight_path}\")\n",
-    "\n",
-    "# with open(final_state_path, \"wb\") as f:\n",
-    "#     pickle.dump(state_dict_train, f)\n",
-    "# print(f\"📦 Final training state saved to: {final_state_path}\")\n",
-    "\n",
-    "# wandb.finish()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "a4166473",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# import matplotlib.pyplot as plt\n",
-    "\n",
-    "# plt.figure(figsize=(8, 4))\n",
-    "# plt.plot(money_history, marker='o', linestyle='-', linewidth=1.5)\n",
-    "# plt.title(\"Trajectory of Money Disposable\")\n",
-    "# plt.xlabel(\"Training Step\")\n",
-    "# plt.ylabel(\"Mean Money Disposable\")\n",
-    "# plt.grid(True, linestyle='--', alpha=0.7)\n",
-    "# plt.tight_layout()\n",
-    "# plt.show()\n"
-   ]
-  },
-  {
    "cell_type": "markdown",
    "id": "7b17f6b1",
    "metadata": {},
@@ -1464,7 +1313,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 46,
    "id": "b8390894",
    "metadata": {},
    "outputs": [],
@@ -1478,13 +1327,16 @@
     "model.eval()\n",
     "\n",
     "# Load state\n",
+    "with open(\"/Users/chenjinghe/Desktop/python-projects/SML-2/checkpoints/exp_transition/run/states/state_step_0.pkl\", \"rb\") as f:\n",
+    "    state_dict_train = pickle.load(f)\n",
+    "\n",
     "with open(final_state_path, \"rb\") as f:\n",
-    "    state_dict_train = pickle.load(f)"
+    "    state_dict_tail = pickle.load(f)"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 75,
    "id": "d93f7937",
    "metadata": {},
    "outputs": [],
@@ -1503,7 +1355,6 @@
     "\n",
     "    return state_dict_train_batch\n",
     "\n",
-    "\n",
     "# Use the first batch\n",
     "batch_number = 0\n",
     "state_dict_train_batch = plot_init_batch(state_dict_train=state_dict_train, batch_number=0)"
@@ -1511,11 +1362,69 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 79,
    "id": "a1c70735",
    "metadata": {},
    "outputs": [],
-   "source": []
+   "source": [
+    "moneydisposable_valid = state_dict_train_batch[\"moneydisposable\"]\n",
+    "moneydisposable_valid  = np.repeat(dim(dim(moneydisposable_valid , 0), 0), DECISION_RULE_PLOT_POINTS, axis=0) \n",
+    "moneydisposable_valid[:, :, 0] = dim(np.linspace(\n",
+    "    state_dict_tail[\"moneydisposable\"].min(), state_dict_tail[\"moneydisposable\"].max(), \n",
+    "    DECISION_RULE_PLOT_POINTS), 1)\n",
+    "moneydisposable_valid  = np.repeat(moneydisposable_valid , DECISION_RULE_Y_REALIZATIONS, axis=1)\n",
+    "\n",
+    "\n",
+    "\n",
+    "ability_valid  = state_dict_train_batch[\"ability\"]\n",
+    "ability_valid  = np.repeat(dim(ability_valid, 0), DECISION_RULE_Y_REALIZATIONS, axis=0)\n",
+    "ability_valid[:, 0] = np.linspace(state_dict_tail[\"ability\"].min(), \n",
+    "                            state_dict_tail[\"ability\"].max(), DECISION_RULE_Y_REALIZATIONS)\n",
+    "\n",
+    "tax_params_valid = np.repeat(dim(state_dict_train_batch[\"tax_params\"], 0), DECISION_RULE_Y_REALIZATIONS, axis=0)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 84,
+   "id": "c3ed3fd6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "decision_rule_results = {\n",
+    "    \"m0\": np.empty(shape=(DECISION_RULE_PLOT_POINTS, DECISION_RULE_Y_REALIZATIONS, AGENTS)),\n",
+    "    \"m1\": np.empty(shape=(DECISION_RULE_PLOT_POINTS, DECISION_RULE_Y_REALIZATIONS, AGENTS)),\n",
+    "    \"c0\": np.empty(shape=(DECISION_RULE_PLOT_POINTS, DECISION_RULE_Y_REALIZATIONS, AGENTS)),\n",
+    "    \"a1\": np.empty(shape=(DECISION_RULE_PLOT_POINTS, DECISION_RULE_Y_REALIZATIONS, AGENTS)),\n",
+    "    \"h0\": np.empty(shape=(DECISION_RULE_PLOT_POINTS, DECISION_RULE_Y_REALIZATIONS, AGENTS)),\n",
+    "}\n",
+    "\n",
+    "state_dict_valid = build_inputs(\n",
+    "    moneydisposable=moneydisposable_valid[0],\n",
+    "    ability=ability_valid,\n",
+    "    tax_params=tax_params_valid    \n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "db2da5fc",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ability_history_A_valid = None\n",
+    "ability_history_B_valid = None\n",
+    "\n",
+    "for step in DECISION_RULE_PLOT_POINTS:\n",
+    "    state_dict_valid, _, _, _, _ = run_model(\n",
+    "        state_dict_train=state_dict_valid, \n",
+    "        model = model,\n",
+    "        ability_history_A=ability_history_A_valid,\n",
+    "        ability_history_B=ability_history_B_valid,\n",
+    "        \n",
+    "    )"
+   ]
   }
  ],
  "metadata": {
